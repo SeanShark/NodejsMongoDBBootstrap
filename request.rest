@@ -1,0 +1,13 @@
+GET http://localhost:5000/api/posts
+
+###
+
+POST http://localhost:5000/api/posts
+Content-Type: application/json
+
+{
+    "text": "Post 2"
+}
+
+###
+DELETE http://localhost:5000/api/posts/64131c5864fbb8079c98a80d
