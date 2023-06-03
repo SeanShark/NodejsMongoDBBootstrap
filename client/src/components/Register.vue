@@ -11,6 +11,9 @@
         v-model="newUser.email"
       />
       <label for="floatingInput">邮箱地址</label>
+      <span v-for="error in v$.email.$errors" :key="error.$uid">
+        {{ error.$message }}
+      </span>
     </div>
     <div class="form-floating mb-3">
       <input
@@ -21,6 +24,9 @@
         v-model="newUser.password"
       />
       <label for="floatingPassword">密码</label>
+      <span v-for="error in v$.password.$errors" :key="error.$uid">
+        {{ error.$message }}
+      </span>
     </div>
 
     <div class="form-floating mb-3">
@@ -32,6 +38,9 @@
         v-model="newUser.repeat_password"
       />
       <label for="floatingcomfirmPassword">重复密码</label>
+      <span v-for="error in v$.repeat_password.$errors" :key="error.$uid">
+        {{ error.$message }}
+      </span>
     </div>
     <Message />
 
@@ -42,30 +51,60 @@
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import Message from "./Message.vue"
+import useVuelidate from "@vuelidate/core";
+import {
+  required,
+  email,
+  sameAs,
+  minLength,
+  helpers,
+} from "@vuelidate/validators";
+
 
 import { useTodosStore } from "../stores/todos";
 
 const store = useTodosStore();
+const router = useRouter();
 
 const newUser = reactive({
   email: "",
   password: "",
   repeat_password: "",
 });
-const router = useRouter();
+
+const rules = computed(() => {
+  return {
+    email: {
+      required: helpers.withMessage("邮箱地址不能为空", required),
+      email: helpers.withMessage("邮箱地址不合法", email),
+    },
+    //password: { required, minLength:minLength(6) },
+    password: {
+      required: helpers.withMessage("密码不能为空", required),
+      minLength: helpers.withMessage("密码至少需要6位数", minLength(6)),
+    },
+    repeat_password: { 
+      required: helpers.withMessage("重复密码不能为空", required),
+      sameAs: helpers.withMessage("与第一次输入的密码不一致", sameAs(newUser.password))
+    },
+  };
+});
+const v$ = useVuelidate(rules, newUser);
 
 const handleSubmit = async () => {
-  store.isDisabled = true;
-  await axios
-    .post("/user/register", {
-    email: newUser.email,
-    password: newUser.password,
-    repeat_password: newUser.repeat_password,
-  })
+  const result = await v$.value.$validate();
+  if(result) {
+    store.isDisabled = true;
+    await axios
+      .post("/user/register", {
+      email: newUser.email,
+      password: newUser.password,
+      repeat_password: newUser.repeat_password,
+    })
     .then(
       (res) => {
         if (res.data.status === "success") {
@@ -86,6 +125,7 @@ const handleSubmit = async () => {
       store.isDisabled = false;
       store.alertMessage.content = err.response.data.msg;
     });
+  }
 };
 
 

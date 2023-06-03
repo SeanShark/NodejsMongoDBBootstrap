@@ -117,8 +117,7 @@ router.get("/verifyuser", async (req, res, next) => {
     await User.findOne({ _id: decoded.userID })
       .then((user) => {
 
-        let lastLogin = new Date().toLocaleString("zh-cn");
-        user.lastLogin = lastLogin;
+        user.lastLogin = new Date().toLocaleString("zh-cn");
         user.save();
 
         return res.status(200).json({
@@ -142,33 +141,36 @@ router.get("/verifyuser", async (req, res, next) => {
 router.post("/forgot", async (req, res, next) => {
   const userEmail = req.body.email;
   await User.findOne({ email: userEmail })
-  .then((user) => {
+  .then( async (user) => {
     const VerificationCode = Math.floor(100000 + Math.random() * 900000);
     user.forgotCode = VerificationCode
     user.save();
     // console.log(user);
-    const sendmain = async () => {
-      await transporter.sendMail({
-        from: "replytech@qq.com",
-        to: userEmail, 
-        subject: "Reset Password", 
-        text: "Hello world?", 
-        //html: `<a href="http://10.168.3.3:5000/api/user/reset/${userEmail}/${VerificationCode}"><b>点击进入重置页面</b></a>`, 
-        html: `此次重置密码的重置码为：${VerificationCode}`, 
-      })
-      .then(info => {
-        res.status(200).json({
-          status: "success",
-          msg: info.messageId,
-        });
-      })
-    }
-    //console.log("Message sent: %s", info.messageId);
-    sendmain().catch(console.error);
+    
+    await transporter.sendMail({
+      from: "replytech@qq.com",
+      to: userEmail, 
+      subject: "Reset Password", 
+      text: "Hello world?", 
+      //html: `<a href="http://10.168.3.3:5000/api/user/reset/${userEmail}/${VerificationCode}"><b>点击进入重置页面</b></a>`, 
+      html: `此次重置密码的重置码为：${VerificationCode}`, 
+    })
+    .then(info => {
+      res.status(200).json({
+        status: "success",
+        msg: info.messageId,
+      });
+    })
+    .catch(err => {
+      res.status(401).json({
+        status: "error",
+        msg: "Connection timed out, Please try again.",
+      });
+    })
   })
   .catch(err => {
     // console.log(err);
-    res.status(400).json({
+    res.status(401).json({
       status: "error",
       msg: "Email address does not exist.",
     });
@@ -180,37 +182,64 @@ router.post("/forgot", async (req, res, next) => {
 /*
   Reset password
 */
-router.get("/verifycode", async (req, res) => {
+router.post("/verifycode", async (req, res) => {
   let forgotCode = req.body.forgotCode;
-  console.log(forgotCode);
+  let email = req.body.email;
   try {
-    // findOne -> email,forgotCode
-
-    //if exist
-
-    
+    await User.findOne({
+      $and: [
+        { email: email },
+        { forgotCode: forgotCode}
+      ]
+    })
+    .then((user) => {
+      if(user) {
+        res.status(200).json({
+          status: "success",
+          msg: 'Please reset your password.',
+        });
+      }
+    })
   } catch(err) {
     //if doesn't exist
-    console.log(err);
+    res.status(401).json({
+      status: "error",
+      msg: 'User or Code error, Please try again',
+    });
   }
 })
 
-router.get("/changepassword", async (req, res) => {
-  //eamil, password
-  try {
-    // findOne -> email
+router.post("/resetpassword", async (req, res) => {
+  let email = req.body.email;
+  let forgotCode = req.body.forgotCode;
+  let password = req.body.password;
 
-    //if exist
+  await User.findOne({
+    $and: [
+      { email: email },
+      { forgotCode: forgotCode}
+    ]
+  })
+  .then((user) => {
+    if(user) {
+      user.password = bcrypt.hashSync( password, 10 );
+      user.forgotCode = "";
+      user.save();
 
-    //bcrypt password
-
-    //if done, res.json
-
-    
-  } catch(err) {
-    //if doesn't exist
+      res.status(201).json({
+        status: "success",
+        msg: 'Password changed successfully.',
+      });
+    }
+  })
+  .catch((err) => {
     console.log(err);
-  }
+    res.status(401).json({
+      status: "error",
+      msg: 'Error occur, please try again.',
+    });
+  })
+
 })
 
 module.exports = router;

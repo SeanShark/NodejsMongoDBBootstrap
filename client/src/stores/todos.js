@@ -11,7 +11,6 @@ export const useTodosStore = defineStore({
     postText: "",
     isDisabled: false,
     postStatus: false,
-    tokenOK: false,
     alertMessage: {
       exist: false,
       content: "",
@@ -98,7 +97,6 @@ export const useTodosStore = defineStore({
           headers: { token: token },
         })
         .then((res) => {
-          this.tokenOK = true;
           this.authUser = res.data.user;
           // console.log('user info:', res.data.user, 'this.authUser:', this.authUser);
         })

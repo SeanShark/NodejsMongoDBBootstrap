@@ -6,7 +6,7 @@
 
     <div class="form-floating mb-3" v-if="step1">
       <input
-        v-model="userEmail"
+        v-model="userInfo.email"
         type="email"
         class="form-control"
         id="emailInput"
@@ -18,7 +18,7 @@
     <div class="form-floating mb-3" v-if="step2">
       
       <input
-        v-model="forgotCode"
+        v-model="userInfo.forgotCode"
         type="email"
         class="form-control"
         id="forgotcodeInput"
@@ -34,10 +34,12 @@
         class="form-control"
         id="floatingPassword"
         placeholder="Password"
-        v-model="password"
-        required
+        v-model="userInfo.password"
       />
       <label for="floatingPassword">密码</label>
+      <span v-for="error in v$.password.$errors" :key="error.$uid">
+        {{ error.$message }}
+      </span>
     </div>
 
     <div class="form-floating mb-3" v-if="step3">
@@ -46,10 +48,12 @@
         class="form-control"
         id="floatingcomfirmPassword"
         placeholder="Password"
-        v-model="repeat_password"
-        required
+        v-model="userInfo.repeat_password"
       />
       <label for="floatingcomfirmPassword">重复密码</label>
+      <span v-for="error in v$.repeat_password.$errors" :key="error.$uid">
+        {{ error.$message }}
+      </span>
     </div>
 
     <Message />
@@ -105,17 +109,27 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed,reactive } from "vue";
 import Message from "./Message.vue";
 import { useTodosStore } from "../stores/todos";
 import axios from "axios";
+import useVuelidate from "@vuelidate/core";
+import {
+  required,
+  sameAs,
+  minLength,
+  helpers,
+} from "@vuelidate/validators";
+
 
 const store = useTodosStore();
 
-const userEmail = ref();
-const forgotCode = ref();
-const password = ref();
-const repeat_password = ref();
+const userInfo = reactive({
+  email: "",
+  forgotCode: "",
+  password: "",
+  repeat_password: "",
+});
 
 const step1 = ref(true);
 const step2 = ref(false);
@@ -126,7 +140,7 @@ const stepOne = async () => {
   try {
     await axios
       .post("/user/forgot", {
-        email: userEmail.value,
+        email: userInfo.email,
       })
       .then((res) => {
         store.isDisabled = false;
@@ -151,17 +165,68 @@ const stepOne = async () => {
 
 const stepTwo = async () => {
   store.resetAlert();
-
-    let res = await axios.post("/user/verifycode", {
-      email:  store.user.email,
-      forgotCode: forgotCode
-    });
-    console.log(res);
-
+  store.isDisabled = true;
+  //verify forgot code
+  await axios.post("/user/verifycode", {
+    email: userInfo.email,
+    forgotCode: userInfo.forgotCode
+  })
+  .then((res) => {
+    if(res.status === 200) {
+      store.alertMessage.exist = true;
+      store.alertMessage.color = "alert-success";
+      store.alertMessage.content = res.data.msg;
+      step2.value = false;
+      step3.value = true;
+      store.isDisabled = false;
+    }
+  })
+  .catch((err) => {
+    store.alertMessage.exist = true;
+    store.alertMessage.content = err.response.data.msg;
+    store.isDisabled = false;
+  })
 };
 
+
+const rules = computed(() => {
+  return {
+    password: {
+      required: helpers.withMessage("密码不能为空", required),
+      minLength: helpers.withMessage("密码至少需要6位数", minLength(6)),
+    },
+    repeat_password: { 
+      required: helpers.withMessage("重复密码不能为空", required),
+      sameAs: helpers.withMessage("与第一次输入的密码不一致", sameAs(userInfo.password))
+    },
+  };
+});
+
+const v$ = useVuelidate(rules, userInfo);
+
 const stepThree = async () => {
-  console.log("click3");
+  store.resetAlert();
+  const result = await v$.value.$validate();
+  if (result) {
+    await axios.post("/user/resetpassword", {
+      email: userInfo.email,
+      forgotCode: userInfo.forgotCode,
+      password: userInfo.password
+    })
+    .then((res) => {
+      if(res.status === 201) {
+        store.alertMessage.exist = true;
+        store.alertMessage.color = "alert-success";
+        store.alertMessage.content = res.data.msg;
+      }
+    })
+    .catch((err) => {
+      store.alertMessage.exist = true;
+      store.alertMessage.color = "alert-warning";
+      store.alertMessage.content = err.response.data.msg;
+      store.isDisabled = false;
+    })
+  }
 };
 </script>
 

@@ -76,21 +76,21 @@ const handleLogin = async (data) => {
   let token = localStorage.getItem("token");
   if (token !== null) {
     await store.verifyUser().then(() => {
-      if(store.tokenOK) {
-        store.isDisabled = true;
-        store.alertMessage.exist = true;
-        store.alertMessage.color = "alert-success";
-        store.alertMessage.content = "登录成功，3秒后自动跳转";
-        setTimeout(() => {
-          store.resetAlert();
-          store.isDisabled = false;
-          router.push("/");
-        }, 3000);
-      }
+      setTimeout(() => {
+        if(store.user) {
+          store.isDisabled = true;
+          store.alertMessage.exist = true;
+          store.alertMessage.color = "alert-success";
+          store.alertMessage.content = "登录成功，3秒后自动跳转";
+          setTimeout(() => {
+            store.resetAlert();
+            store.isDisabled = false;
+            router.push("/");
+          }, 3000);
+        }
+      }, 200);
     })
     .catch(err => console.log(err))
-      
-    
   }
 };
 </script>
