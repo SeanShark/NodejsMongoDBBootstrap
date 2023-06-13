@@ -8,7 +8,7 @@ const router = express.Router();
 const transporter = require("../../Mail/email");
 
 /* 
-  Register
+  Register For Bootstrp
 */
 router.post("/register", async (req, res, next) => {
   const schema = Joi.object({
@@ -57,6 +57,17 @@ router.post("/register", async (req, res, next) => {
       .catch((err) => console.log(err));
   });
 });
+
+/* 
+  Register For Quasar
+*/
+//Step One: Check email and send register code, save code in db
+
+//Step two: Check email and register code, if ture, send 200 to client; if false, send 401
+
+//Step three: Check email and register code, if ture ,save bcrypt password, delete register code and send status 200
+
+
 
 /* 
   Login
@@ -138,6 +149,7 @@ router.get("/verifyuser", async (req, res, next) => {
   Forgot password
 */
 
+//Step One: Check email and send forgot code via email, save code in db
 router.post("/forgot", async (req, res, next) => {
   const userEmail = req.body.email;
   await User.findOne({ email: userEmail })
@@ -179,9 +191,8 @@ router.post("/forgot", async (req, res, next) => {
 
 })
 
-/*
-  Reset password
-*/
+
+//Step two: Check email and forgotCode code, if ture, send 200 to client; if false, send 401
 router.post("/verifycode", async (req, res) => {
   let forgotCode = req.body.forgotCode;
   let email = req.body.email;
@@ -209,6 +220,7 @@ router.post("/verifycode", async (req, res) => {
   }
 })
 
+//Step three: Check email and forgot code, if ture ,save bcrypt new password, delete forgot code and send status 200
 router.post("/resetpassword", async (req, res) => {
   let email = req.body.email;
   let forgotCode = req.body.forgotCode;
