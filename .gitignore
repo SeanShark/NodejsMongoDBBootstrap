@@ -133,3 +133,36 @@ dist
 client/node_modules/*
 
 .env
+
+
+########## Quasar
+
+quasar/.DS_Store
+quasar/.thumbs.db
+quasar/node_modules
+
+# Quasar core related directories
+quasar/.quasar
+quasar/dist
+
+# Cordova related directories and files
+quasar/src-cordova/node_modules
+quasar/src-cordova/platforms
+quasar/src-cordova/plugins
+quasar/src-cordova/www
+
+# Capacitor related directories and files
+quasar/src-capacitor/www
+quasar/src-capacitor/node_modules
+
+# Log files
+quasar/npm-debug.log*
+quasar/yarn-debug.log*
+quasar/yarn-error.log*
+
+# Editor directories and files
+quasar/.idea
+quasar/*.suo
+quasar/*.ntvs*
+quasar/*.njsproj
+quasar/*.sln
