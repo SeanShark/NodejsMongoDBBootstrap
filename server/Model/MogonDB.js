@@ -25,7 +25,6 @@ const postsSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
   },
   email: {
     type: String,
@@ -34,14 +33,14 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    requried: true
   },
   forgotCode: {
     type: String,
+    default: null,
   },
-  isActivated: {
-    type: Boolean,
-    default: false
+  activationCode: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: String

@@ -1,9 +1,0 @@
-PORT = 5000
-
-#Change the URL of your own DB
-
-mongoDBURL = "mongodb://myTester:test123@127.0.0.1:27017/?authMechanism=DEFAULT&authSource=test"
-jwtSecretKey = "This_is_your_secret_key"
-mailPass = "Your_email_password"
-
-#Don't forgot to rename this file name to '.env'.

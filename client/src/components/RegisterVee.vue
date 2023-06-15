@@ -1,6 +1,7 @@
 <template>
-  <form @submit.prevent="handleSubmit(values)">
+  <form @submit.prevent="handleSubmit(value)">
     <h3 class="text-center p-3">注 册 页</h3>
+
     <Field name="email" type="email" />
     <div class="form-floating mb-3">
       <input
@@ -61,21 +62,21 @@ import axios from "axios";
 import Message from "./Message.vue";
 import { useField } from 'vee-validate';
 
-const props = defineProps({
-  name: {
-    type: String,
-    required: true,
-  },
-});
-
-const isRequired = (value) => {
-  if (value && value.trim()) {
-    return true;
+function validateField(value) {
+  if (!value) {
+    return 'this field is required';
   }
-  return 'This is required';
+
+  if (value.length < 8) {
+    return 'this field must contain at least 8 characters';
+  }
+
+  return true;
 }
 
-const { errorMessage, value } = useField(() => props.name, isRequired);
+const { value, errorMessage } = useField('fullName', validateField);
+
+
 
 import { useTodosStore } from "../stores/todos";
 
@@ -88,8 +89,8 @@ const newUser = reactive({
   repeat_password: "",
 });
 
-const handleSubmit = async (values) => {
-  console.log(values);
+const handleSubmit = async (value) => {
+  console.log(value);
   // store.isDisabled = true;
   // await axios
   //   .post("/user/register", {
