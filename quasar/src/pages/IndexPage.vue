@@ -55,7 +55,6 @@
                 :type="isPwd ? 'password' : 'text'"
                 v-model="loginInfo.password"
                 label="密码"
-                
               >
                 <template v-slot:before>
                   <q-icon name="password" />
@@ -74,6 +73,12 @@
                 class="q-pl-md text-subtitle2 text-red text-left"
               >
                 {{ error.$message }}
+              </div>
+              <div
+                v-if="errorMsg"
+                class="q-pl-md text-subtitle2 text-red text-left"
+              >
+                {{ errorMsg }}
               </div>
             </div>
 
@@ -117,12 +122,13 @@
                       请输入需注册的邮箱地址：
                     </p>
                     <q-input
-                      filled
+                      :filled="!captcha.state"
                       v-model="userInfo.email"
                       type="email"
                       label="邮箱地址"
                       class="q-pt-md"
                       @keyup.enter="submitOne"
+                      :disable="captcha.state"
                     >
                       <template v-slot:before>
                         <q-icon color="teal" name="mail" />
@@ -156,7 +162,6 @@
                       type="text"
                       label="注册码"
                       class="q-pt-md"
-                      @keyup.enter="submitTwo"
                     >
                       <template v-slot:before>
                         <q-icon color="red" name="key" />
@@ -234,15 +239,25 @@
                     >
                       {{ error.$message }}
                     </div>
-                    <div
-                      v-if="errorMsg"
-                      class="q-pl-md text-subtitle2 text-red text-left"
-                    >
-                      {{ errorMsg }}
-                    </div>
                   </div>
                 </q-tab-panel>
               </q-tab-panels>
+              <div v-if="captcha.state" class="row justify-center items-center">
+                <div class="col-3 self-center text-h8">非机器验证：</div>
+                <div class="col-5 self-start">
+                  <div @click="getcapcha" v-html="captcha.Url"></div>
+                </div>
+                <div class="col-4 self-start">
+                  <q-input
+                    dense
+                    filled
+                    v-model="captcha.Data"
+                    :rules="[(val) => val.length <= 4 || '验证码为四位字符']"
+                  >
+                  </q-input>
+                </div>
+              </div>
+
               <div class="row justify-end q-py-md q-ma-none">
                 <q-btn
                   v-if="stepOne"
@@ -252,7 +267,10 @@
                   label="提 交"
                   @click="submitOne"
                   class="full-width"
-                ><slot v-if="loadingState"><q-spinner-ios color="white"/></slot></q-btn>
+                  ><slot v-if="loadingState"
+                    ><q-spinner-ios color="white" /></slot
+                ></q-btn>
+
                 <q-btn
                   v-if="stepTwo"
                   color="orange-6"
@@ -261,7 +279,9 @@
                   @click="submitTwo"
                   class="full-width"
                   :disable="loadingState"
-                ><slot v-if="loadingState"><q-spinner-ios color="white"/></slot></q-btn>
+                  ><slot v-if="loadingState"
+                    ><q-spinner-ios color="white" /></slot
+                ></q-btn>
                 <q-btn
                   v-if="stepThree"
                   color="orange-6"
@@ -269,8 +289,10 @@
                   label="提 交"
                   @click="submitThree"
                   class="full-width"
-                  :disable="loadingState"
-                ><slot v-if="loadingState"><q-spinner-ios color="white"/></slot></q-btn>
+                  :disable="isDone"
+                  ><slot v-if="loadingState"
+                    ><q-spinner-ios color="white" /></slot
+                ></q-btn>
               </div>
             </div>
           </q-tab-panel>
@@ -281,9 +303,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed, watch, onMounted } from "vue";
+import { useUserStore } from "src/stores/store";
+import { useRouter } from "vue-router";
 import useVuelidate from "@vuelidate/core";
-import axios from 'axios';
+import axios from "axios";
 import {
   email,
   required,
@@ -292,6 +316,10 @@ import {
   helpers,
   between,
 } from "@vuelidate/validators";
+import { useQuasar } from "quasar";
+
+const store = useUserStore();
+const router = useRouter();
 
 const mainTab = ref("login");
 const registerTab = ref("email");
@@ -301,6 +329,39 @@ const stepOne = ref(true);
 const stepTwo = ref(false);
 const stepThree = ref(false);
 const loadingState = ref(false);
+const isDone = ref(false);
+
+const captcha = reactive({
+  Url: "",
+  Data: "",
+  text: "",
+  state: true,
+});
+
+onMounted(() => {
+  getcapcha();
+});
+
+const getcapcha = () => {
+  captcha.state = true;
+  axios.get(`/user/captcha?${Math.random()}`).then((res) => {
+    captcha.Url = res.data.data;
+    captcha.text = res.headers["captcha"].toLowerCase();
+  });
+};
+
+watch(
+  () => captcha.Data,
+  (newValue) => {
+    if (newValue.toLowerCase() === captcha.text) {
+      captcha.state = false;
+      errorMsg.value = null;
+      successTip("验证通过,请输入您的邮箱地址");
+    } else {
+      captcha.state = true;
+    }
+  }
+);
 
 const loginInfo = reactive({
   email: "",
@@ -314,7 +375,6 @@ const userInfo = reactive({
   password: "",
   repeat_password: "",
 });
-
 
 const loginRule = computed(() => {
   return {
@@ -366,11 +426,41 @@ const passwordRules = computed(() => {
   };
 });
 
-watch(() => userInfo.email, (newValue, oldValue) => {
-  if (newValue !== oldValue) {
-    errorMsg.value = null
-  } 
-})
+watch(
+  () => loginInfo.email,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      errorMsg.value = null;
+    }
+  }
+);
+
+watch(
+  () => loginInfo.password,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      errorMsg.value = null;
+    }
+  }
+);
+
+watch(
+  () => userInfo.email,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      errorMsg.value = null;
+    }
+  }
+);
+
+watch(
+  () => userInfo.code,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      errorMsg.value = null;
+    }
+  }
+);
 
 const v_login$ = useVuelidate(loginRule, loginInfo);
 const v_mail$ = useVuelidate(emailRule, userInfo);
@@ -380,80 +470,122 @@ const v_pwd$ = useVuelidate(passwordRules, userInfo);
 const loginSubmit = async () => {
   const mailResult = await v_login$.value.$validate();
   if (mailResult) {
-    console.log("login");
+    await axios
+      .post("/user/login", loginInfo)
+      .then(async (res) => {
+        if (res.status === 200) {
+          localStorage.setItem("token", res.data.token);
+          //console.log(localStorage.getItem('token'));
+          await store.verifyUser()
+            .then(() => {
+              console.log('user');
+              return
+              // if(store.user) {
+              //   successTip("成功登录");
+              //   router.push("/");
+              // }
+            })
+            .catch((err) => {
+              console.log('nouser');
+              return
+              // console.log('step2', err.response.data.msg);
+            })
+        }
+      })
+      .catch((err) => {
+        // console.log('step1', err.response.data.msg);
+        errorMsg.value = err.response.data.msg;
+      });
   }
 };
 
 const submitOne = async () => {
-  errorMsg.value = null
+  errorMsg.value = null;
+  if (captcha.state) {
+    return (errorMsg.value = "请先通过非机器验证");
+  }
   const mailResult = await v_mail$.value.$validate();
   if (mailResult) {
-    loadingState.value = true
-    await axios.post("http://10.168.3.3:5000/api/user/signup", {
-      email: userInfo.email
-    })
-    .then(async (res) => {
-      if (res.data.status === "success") {
-        loadingState.value = false
-        stepOne.value = false
-        stepTwo.value = true
-        registerTab.value = "code"
-      }
-    })
-    .catch((err) => {
-      loadingState.value = false
-      errorMsg.value = err.response.data.msg
-    });
+    loadingState.value = true;
+    await axios
+      .post("/user/signup", {
+        email: userInfo.email,
+      })
+      .then(async (res) => {
+        if (res.data.status === "success") {
+          successTip(res.data.msg);
+          loadingState.value = false;
+          stepOne.value = false;
+          stepTwo.value = true;
+          registerTab.value = "code";
+        }
+      })
+      .catch((err) => {
+        loadingState.value = false;
+        errorMsg.value = err.response.data.msg;
+      });
   }
 };
 
 const submitTwo = async () => {
-  errorMsg.value = null
+  errorMsg.value = null;
   const codeResult = await v_code$.value.$validate();
   if (codeResult) {
-    loadingState.value = true
-    await axios.post("http://10.168.3.3:5000/api/user/verifysignup", {
-      email: userInfo.email,
-      code: userInfo.code
-    })
-    .then(async (res) => {
-      if (res.data.status === "success") {
-        loadingState.value = false
-        stepTwo.value = false
-        stepThree.value = true
-        registerTab.value = "register"
-      }
-    })
-    .catch((err) => {
-      loadingState.value = false
-      errorMsg.value = err.response.data.msg
-    });
+    loadingState.value = true;
+    await axios
+      .post("/user/verifysignup", {
+        email: userInfo.email,
+        code: userInfo.code,
+      })
+      .then(async (res) => {
+        if (res.data.status === "success") {
+          successTip(res.data.msg);
+          loadingState.value = false;
+          stepTwo.value = false;
+          stepThree.value = true;
+          registerTab.value = "register";
+        }
+      })
+      .catch((err) => {
+        loadingState.value = false;
+        errorMsg.value = err.response.data.msg;
+      });
   }
-}
-
+};
 
 const submitThree = async () => {
   const pwdResult = await v_pwd$.value.$validate();
   if (pwdResult) {
-    loadingState.value = true
-    await axios.post("http://10.168.3.3:5000/api/user/setpassword", {
-      email: userInfo.email,
-      code: userInfo.code,
-      password: userInfo.password,
-    })
-    .then(async (res) => {
-      if (res.data.status === "success") {
-        loadingState.value = false
-        errorMsg.value = res.data.msg
-      }
-    })
-    .catch((err) => {
-      loadingState.value = false
-      errorMsg.value = err.response.data.msg
-    });
+    loadingState.value = true;
+    await axios
+      .post("/user/setpassword", {
+        email: userInfo.email,
+        code: userInfo.code,
+        password: userInfo.password,
+      })
+      .then(async (res) => {
+        if (res.data.status === "success") {
+          successTip(res.data.msg);
+          loadingState.value = false;
+          isDone.value = true;
+        }
+      })
+      .catch((err) => {
+        loadingState.value = false;
+        errorMsg.value = err.response.data.msg;
+      });
   }
+};
+
+const $q = useQuasar();
+
+const successTip = (msg) => {
+  $q.notify({
+    type: "positive",
+    progress: true,
+    message: `${msg}`,
+  });
 };
 </script>
 
-<style lang="sass" scoped>
-</style>
+<style lang="sass" scoped></style>

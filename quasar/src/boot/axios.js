@@ -1,6 +1,7 @@
 import { boot } from 'quasar/wrappers'
 import axios from 'axios'
-
+axios.defaults.baseURL = 'http://10.168.3.3:5000/api';
+axios.defaults.timeout = 5000;
 // Be careful when using SSR for cross-request state pollution
 // due to creating a Singleton instance here;
 // If any client changes this (global) instance, it might be a

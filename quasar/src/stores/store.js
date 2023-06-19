@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import axios from "axios";
-const url = "http://10.168.3.3:5000/api/posts/";
 
 export const useUserStore = defineStore("userinfo", {
   state: () => ({
     authUser: null,
     isDisabled: false,
     postStatus: false,
+    systemMSG: "",
   }),
   getters: {
     user: (state) => state.authUser,
@@ -21,9 +21,7 @@ export const useUserStore = defineStore("userinfo", {
           }
         })
         .catch((err) => {
-          this.alertMessage.exist = true;
-          this.alertMessage.color = "alert-warning";
-          this.alertMessage.content = err.response.data.msg;
+
           //console.log(err.response.data.msg);
         });
     },
@@ -32,8 +30,6 @@ export const useUserStore = defineStore("userinfo", {
       const token = localStorage.getItem("token");
 
       if (token === null) {
-        this.alertMessage.exist = true;
-        this.alertMessage.content = "Login please.";
         return;
       }
 
@@ -46,10 +42,8 @@ export const useUserStore = defineStore("userinfo", {
           // console.log('user info:', res.data.user, 'this.authUser:', this.authUser);
         })
         .catch((err) => {
+          this.systemMSG = null;
           this.authUser = null;
-          // console.log(err);
-          this.alertMessage.exist = true;
-          this.alertMessage.content = err.response.data.msg;
           // console.log(err.response.data.msg)
         });
     },
