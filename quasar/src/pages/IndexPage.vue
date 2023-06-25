@@ -74,12 +74,6 @@
               >
                 {{ error.$message }}
               </div>
-              <div
-                v-if="errorMsg"
-                class="q-pl-md text-subtitle2 text-red text-left"
-              >
-                {{ errorMsg }}
-              </div>
             </div>
 
             <div class="q-my-md row justify-between">
@@ -141,12 +135,7 @@
                     >
                       {{ error.$message }}
                     </div>
-                    <div
-                      v-if="errorMsg"
-                      class="q-pl-md text-subtitle2 text-red text-left"
-                    >
-                      {{ errorMsg }}
-                    </div>
+
                   </div>
                 </q-tab-panel>
 
@@ -173,12 +162,6 @@
                       class="q-pl-md text-subtitle2 text-red text-left"
                     >
                       {{ error.$message }}
-                    </div>
-                    <div
-                      v-if="errorMsg"
-                      class="q-pl-md text-subtitle2 text-red text-left"
-                    >
-                      {{ errorMsg }}
                     </div>
                   </div>
                 </q-tab-panel>
@@ -244,10 +227,10 @@
               </q-tab-panels>
               <div v-if="captcha.state" class="row justify-center items-center">
                 <div class="col-3 self-center text-h8">非机器验证：</div>
-                <div class="col-5 self-start">
+                <div class="col-6 self-start">
                   <div @click="getcapcha" v-html="captcha.Url"></div>
                 </div>
-                <div class="col-4 self-start">
+                <div class="col-3 self-start">
                   <q-input
                     dense
                     filled
@@ -266,6 +249,7 @@
                   icon-right="send"
                   label="提 交"
                   @click="submitOne"
+                  @keyup.enter="submitOne"
                   class="full-width"
                   ><slot v-if="loadingState"
                     ><q-spinner-ios color="white" /></slot
@@ -277,6 +261,7 @@
                   icon-right="send"
                   label="提 交"
                   @click="submitTwo"
+                  @keyup.enter="submitTwo"
                   class="full-width"
                   :disable="loadingState"
                   ><slot v-if="loadingState"
@@ -288,6 +273,7 @@
                   icon-right="send"
                   label="提 交"
                   @click="submitThree"
+                  @keyup.enter="submitThree"
                   class="full-width"
                   :disable="isDone"
                   ><slot v-if="loadingState"
@@ -318,6 +304,8 @@ import {
 } from "@vuelidate/validators";
 import { useQuasar } from "quasar";
 
+const $q = useQuasar();
+
 const store = useUserStore();
 const router = useRouter();
 
@@ -338,8 +326,17 @@ const captcha = reactive({
   state: true,
 });
 
-onMounted(() => {
+onMounted(async () => {
   getcapcha();
+
+  let token = localStorage.getItem("token");
+
+  if (token !== null) {
+    await store.verifyUser();
+    if (store.user) {
+      router.push("/");
+    }
+  }
 });
 
 const getcapcha = () => {
@@ -475,26 +472,15 @@ const loginSubmit = async () => {
       .then(async (res) => {
         if (res.status === 200) {
           localStorage.setItem("token", res.data.token);
-          //console.log(localStorage.getItem('token'));
-          await store.verifyUser()
-            .then(() => {
-              console.log('user');
-              return
-              // if(store.user) {
-              //   successTip("成功登录");
-              //   router.push("/");
-              // }
-            })
-            .catch((err) => {
-              console.log('nouser');
-              return
-              // console.log('step2', err.response.data.msg);
-            })
+          try {
+            await store.verifyUser();
+            successTip("成功登录");
+            router.push("/");
+          } catch (err) {}
         }
       })
       .catch((err) => {
-        // console.log('step1', err.response.data.msg);
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -522,7 +508,7 @@ const submitOne = async () => {
       })
       .catch((err) => {
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -548,7 +534,7 @@ const submitTwo = async () => {
       })
       .catch((err) => {
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -572,12 +558,10 @@ const submitThree = async () => {
       })
       .catch((err) => {
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
-
-const $q = useQuasar();
 
 const successTip = (msg) => {
   $q.notify({
@@ -586,6 +570,15 @@ const successTip = (msg) => {
     message: `${msg}`,
   });
 };
+
+const failureTip = (msg) => {
+  $q.notify({
+    type: "negative",
+    progress: true,
+    message: `${msg}`,
+  });
+};
+
 </script>
 
 <style lang="sass" scoped></style>

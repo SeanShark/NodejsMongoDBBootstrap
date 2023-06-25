@@ -232,7 +232,7 @@ router.post("/login", async (req, res, next) => {
 
       const token = jwt.sign({ userID: user._id }, key);
 
-      return res.status(200).json({
+      res.status(200).json({
         status: "success",
         msg: "验证成功",
         token: token,
@@ -247,7 +247,6 @@ router.post("/login", async (req, res, next) => {
 
 router.get("/verifyuser", async (req, res, next) => {
   let token = req.headers.token;
-  console.log(token);
 
   jwt.verify(token, key, async (err, decoded) => {
     if (err)
@@ -255,22 +254,21 @@ router.get("/verifyuser", async (req, res, next) => {
         title: "error",
         msg: "未授权用户",
       });
-      console.log(decoded);
-    // await User.findOne({ _id: decoded.userID })
-    //   .then((user) => {
-    //     user.lastLogin = new Date();
-    //     user.save();
+    await User.findOne({ _id: decoded.userID })
+      .then((user) => {
+        user.lastLogin = new Date();
+        user.save();
 
-    //     return res.status(200).json({
-    //       user: {
-    //         email: user.email,
-    //         name: user.name,
-    //         createdAt: user.createdAt,
-    //         lastLogin: user.lastLogin,
-    //       },
-    //     });
-    //   })
-    //   .catch((err) => console.log(err));
+        return res.status(200).json({
+          user: {
+            email: user.email,
+            name: user.name,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+          },
+        });
+      })
+      .catch((err) => console.log('verifyuser', err));
   });
 });
 

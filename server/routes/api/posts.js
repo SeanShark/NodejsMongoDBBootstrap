@@ -53,16 +53,16 @@ router.post("/", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    await Posts.deleteOne({ _id: req.params.id });
+    await Todo.deleteOne({ _id: req.params.id });
     res.status(201).json({
       status: "success",
-      msg: "Post deleted successfully."
+      msg: "任务已成功删除."
     });
   } catch (err) {
     console.log(err);
     res.status(500).json({
       status: "error",
-      msg: "Internal Server Error."
+      msg: "内部错误，请重试."
     });
   }
 });

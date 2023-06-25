@@ -1,4 +1,4 @@
-const { boolean } = require("joi");
+const { boolean, string } = require("joi");
 const mongoose = require("mongoose");
 const dbURL = process.env.mongoDBURL;
 
@@ -7,6 +7,30 @@ mongoose
   .connect(dbURL)
   .then(() => console.log("MongoDB Connected..."))
   .catch((err) => console.log(err));
+
+  const todoSchema = new mongoose.Schema({
+    owner: {
+      type: String,
+      required: true,
+    },
+    todo: {
+      type: String,
+      required: true,
+    },
+    createdAt: {
+      type: String,
+      required: true,
+      // timezone: 'Asia/Shanghai' // set timezone to EST
+    },
+    color: {
+      type: String,
+      default: "black",
+    },
+    isDone: {
+      type: Boolean,
+      default: false,
+    }
+  });
 
 
 const postsSchema = new mongoose.Schema({
@@ -80,9 +104,11 @@ const IpMacSchema = new mongoose.Schema({
 const Posts = mongoose.models.posts || mongoose.model("posts", postsSchema);
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 const Ipmac = mongoose.models.ipmacs || mongoose.model("Ipmac", IpMacSchema);
+const Todo = mongoose.models.todo || mongoose.model("Todo", todoSchema);
 
 module.exports = {
   Posts,
   User,
-  Ipmac
+  Ipmac,
+  Todo,
 };

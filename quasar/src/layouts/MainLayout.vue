@@ -21,7 +21,7 @@
           />
         </q-toolbar-title>
 
-        <div>{{ formattedString }}</div>
+        <q-btn round flat icon="logout" @click="logout"/>
       </q-toolbar>
     </q-header>
 
@@ -64,21 +64,27 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useRoute } from "vue-router";
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "../stores/store"
 
 const route = useRoute();
+const router = useRouter();
+
 const store = useUserStore();
 
+onMounted(async () => {
 
-import { date } from "quasar";
+  await store.verifyUser()
 
-const timeStamp = Date.now();
+})
 
-const formattedString = ref("");
-//formattedString.value = date.formatDate(timeStamp, 'YYYY-MM-DD-HH:mm:ss')
-formattedString.value = date.formatDate(timeStamp, "YYYY-MM-DD");
+const logout =async () => {
+  store.logout();
+  router.push("/index");
+  await store.verifyUser()
+}
+
 
 const leftDrawerOpen = ref(false);
 const toggleLeftDrawer = () => {

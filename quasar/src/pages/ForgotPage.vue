@@ -32,12 +32,6 @@
               >
                 {{ error.$message }}
               </div>
-              <div
-                v-if="errorMsg"
-                class="q-pl-md text-subtitle2 text-red text-left"
-              >
-                {{ errorMsg }}
-              </div>
             </div>
           </q-tab-panel>
 
@@ -63,12 +57,6 @@
                 class="q-pl-md text-subtitle2 text-red"
               >
                 {{ error.$message }}
-              </div>
-              <div
-                v-if="errorMsg"
-                class="q-pl-md text-subtitle2 text-red text-left"
-              >
-                {{ errorMsg }}
               </div>
             </div>
           </q-tab-panel>
@@ -129,21 +117,15 @@
               >
                 {{ error.$message }}
               </span>
-              <div
-                v-if="errorMsg"
-                class="q-pl-md text-subtitle2 text-red text-left"
-              >
-                {{ errorMsg }}
-              </div>
             </div>
           </q-tab-panel>
         </q-tab-panels>
         <div v-if="captcha.state" class="row justify-center items-center">
-          <div class="col-3 self-center text-h8">非机器验证：</div>
-          <div class="col-5 self-start">
+          <div class="col-3 self-center text-h8">验证：</div>
+          <div class="col-6 self-start">
             <div @click="getcapcha" v-html="captcha.Url"></div>
           </div>
-          <div class="col-4 self-start">
+          <div class="col-3 self-start">
             <q-input
               dense
               filled
@@ -350,7 +332,7 @@ const submitOne = async () => {
       })
       .catch((err) => {
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -376,7 +358,7 @@ const submitTwo = async () => {
       })
       .catch((err) => {
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -401,7 +383,7 @@ const submitThree = async () => {
       .catch((err) => {
         console.log(err);
         loadingState.value = false;
-        errorMsg.value = err.response.data.msg;
+        failureTip(err.response.data.msg);
       });
   }
 };
@@ -411,6 +393,14 @@ const $q = useQuasar();
 const successTip = (msg) => {
   $q.notify({
     type: "positive",
+    progress: true,
+    message: `${msg}`,
+  });
+};
+
+const failureTip = (msg) => {
+  $q.notify({
+    type: "negative",
     progress: true,
     message: `${msg}`,
   });
