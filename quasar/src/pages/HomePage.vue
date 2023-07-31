@@ -3,28 +3,34 @@
     <p class="text-h6 text-center q-pa-md">备忘录</p>
     <div class="column q-pa-sm q-ma-none">
       <q-input
+        ref="inputRef"
+        v-model="todoData.todo"
         bg-color="white"
         class="col q-pa-none"
         bottom-slots
-        v-model="todoData.todo"
+        hide-bottom-space
+        :rules="[(val) => !!val || '请输入内容']"
         outlined
-        standout
         placeholder="请输入您的内容"
+        lazy-rules="ondemand"
         @keyup.enter="createTodo"
       >
-        <template v-slot:append>
-          <q-btn round dense flat icon="add" @click.stop="createTodo" />
+        <template #prepend>
+          <q-icon name="event" />
+        </template>
+        <template #append>
+          <q-btn round dense flat icon="send" @click.stop="createTodo" />
         </template>
       </q-input>
       <div class="col q-pa-sm">
         <div class="q-gutter-sm row justify-center">
           <q-radio
             v-for="(color, index) in colorPanel"
-            v-bind:item="color"
-            v-bind:index="index"
-            v-bind:key="index"
-            keep-color
+            :key="index"
             v-model="todoData.color"
+            :item="color"
+            :index="index"
+            keep-color
             :val="color.value"
             :color="color.color"
             :label="color.label"
@@ -53,13 +59,13 @@
           <q-tab-panel name="todo" style="min-height: 150px">
             <q-list separator bordered>
               <q-item
-                v-for="(list, index) in store.todolistsNotyet"
-                v-bind:item="list"
-                v-bind:index="index"
-                v-bind:key="list._id"
-                @dblclick="editTask(list)"
+                v-for="(list, index) in store.doingLists"
+                :key="list._id"
                 v-ripple
+                :item="list"
+                :index="index"
                 clickable
+                @dblclick="editTask(list)"
               >
                 <q-item-section avatar>
                   <q-checkbox
@@ -74,21 +80,20 @@
                     <div :class="list.color" class="text-subtitle1">
                       {{ list.todo }}
                     </div>
-                    <div class="text-subtitle2 text-italic">
+                    <div class="text-italic">
                       {{ list.createdAt }}
                     </div>
                   </q-item-label>
                 </q-item-section>
 
                 <q-btn-dropdown
-                  @click.stop
                   color="primary"
-                  dropdown-icon="fa-solid fa-bars"
-                  size="xs"
-                  no-icon-animation
+                  padding="xs xs"
+                  class="glossy"
+                  @click.stop
                 >
                   <q-list>
-                    <q-item clickable v-close-popup @click="editTask(list)">
+                    <q-item v-close-popup clickable @click="editTask(list)">
                       <q-item-section avatar>
                         <q-icon name="edit_note" color="primary" size="sm" />
                       </q-item-section>
@@ -100,8 +105,8 @@
                     <q-separator />
 
                     <q-item
-                      clickable
                       v-close-popup
+                      clickable
                       @click="confirmDel(list._id)"
                     >
                       <q-item-section avatar>
@@ -114,7 +119,7 @@
 
                     <q-separator />
 
-                    <q-item clickable v-close-popup @click="colorDialog(list)">
+                    <q-item v-close-popup clickable @click="colorDialog(list)">
                       <q-item-section avatar>
                         <q-icon name="color_lens" color="teal" size="sm" />
                       </q-item-section>
@@ -127,7 +132,7 @@
               </q-item>
             </q-list>
             <div
-              v-if="!store.todolistsNotyet.length"
+              v-if="!store.doingLists.length"
               class="no-tasks absolute-center"
             >
               <q-icon name="check" size="50px" color="primary" />
@@ -138,13 +143,13 @@
           <q-tab-panel name="done" style="min-height: 150px">
             <q-list separator bordered>
               <q-item
-                v-for="(list, index) in store.todolistsDone"
-                v-bind:item="list"
-                v-bind:index="index"
-                v-bind:key="list._id"
-                @dblclick="editTask(list)"
+                v-for="(list, index) in store.doneLists"
+                :key="list._id"
                 v-ripple
+                :item="list"
+                :index="index"
                 clickable
+                @dblclick="editTask(list)"
               >
                 <q-item-section avatar>
                   <q-checkbox
@@ -160,14 +165,13 @@
                 </q-item-section>
 
                 <q-btn-dropdown
-                  @click.stop
                   color="primary"
-                  dropdown-icon="fa-solid fa-bars"
-                  size="xs"
-                  no-icon-animation
+                  padding="xs xs"
+                  class="glossy"
+                  @click.stop
                 >
                   <q-list>
-                    <q-item clickable v-close-popup @click="editTask(list)">
+                    <q-item v-close-popup lickable @click="editTask(list)">
                       <q-item-section avatar>
                         <q-icon name="edit_note" color="primary" size="sm" />
                       </q-item-section>
@@ -179,8 +183,8 @@
                     <q-separator />
 
                     <q-item
-                      clickable
                       v-close-popup
+                      clickable
                       @click="confirmDel(list._id)"
                     >
                       <q-item-section avatar>
@@ -193,11 +197,7 @@
 
                     <q-separator />
 
-                    <q-item
-                      clickable
-                      v-close-popup
-                      @click="colorDialog(list)"
-                    >
+                    <q-item v-close-popup clickable @click="colorDialog(list)">
                       <q-item-section avatar>
                         <q-icon name="color_lens" color="teal" size="sm" />
                       </q-item-section>
@@ -210,7 +210,7 @@
               </q-item>
             </q-list>
             <div
-              v-if="!store.todolistsDone.length"
+              v-if="!store.doneLists.length"
               class="no-tasks absolute-center"
             >
               <q-icon name="check" size="50px" color="primary" />
@@ -233,8 +233,12 @@ import { date } from "quasar";
 const router = useRouter();
 const store = useUserStore();
 
+const inputRef = ref(null);
+
 onMounted(async () => {
   let token = localStorage.getItem("token");
+
+  store.getTodolists();
 
   if (token !== null) {
     try {
@@ -242,8 +246,7 @@ onMounted(async () => {
       if (!store.user) {
         router.push("/index");
       } else {
-        store.getTodolistsNotyet();
-        store.getTodolistsDone();
+        store.getTodolists();
       }
     } catch (err) {
       router.push("/index");
@@ -253,6 +256,7 @@ onMounted(async () => {
   }
 });
 
+
 const tab = ref("todo");
 const todoData = reactive({
   owner: "",
@@ -261,22 +265,21 @@ const todoData = reactive({
   createdAt: "",
 });
 
-const createTodo = () => {
-  if (todoData.todo === "") {
-    return failureTip("内容不能为空");
+const createTodo = async () => {
+  if (await inputRef.value?.validate()) {
+    todoData.owner = store.user.email;
+    todoData.createdAt = date.formatDate(Date.now(), "YYYY-MM-DD-HH:mm:ss");
+    store
+      .createTodo(todoData)
+      .then(() => {
+        todoData.todo = "";
+        todoData.color = "text-black";
+        successTip(store.systemMsg);
+      })
+      .catch(() => {
+        failureTip(store.systemMsg);
+      });
   }
-  todoData.owner = store.user.email;
-  todoData.createdAt = date.formatDate(Date.now(), "YYYY-MM-DD-HH:mm:ss");
-  store
-    .createTodo(todoData)
-    .then(() => {
-      todoData.todo = "";
-      todoData.color = "text-black";
-      successTip(store.systemMsg);
-    })
-    .catch(() => {
-      failureTip(store.systemMsg);
-    });
 };
 
 const handleClick = (field, id, value) => {
@@ -285,8 +288,7 @@ const handleClick = (field, id, value) => {
       .editTodo(field, id, value)
       .then(() => {
         successTip(store.systemMsg);
-        store.getTodolistsNotyet();
-        store.getTodolistsDone();
+        store.getTodolists();
       })
       .catch(() => {
         failureTip(store.systemMsg);
@@ -295,14 +297,14 @@ const handleClick = (field, id, value) => {
 };
 
 const colorPanel = [
-        { label: "黑色", value: "text-black", color: "black" },
-        { label: "蓝色", value: "text-primary", color: "primary" },
-        { label: "紫色", value: "text-accent", color: "accent" },
-        { label: "红色", value: "text-negative", color: "negative" },
-        { label: "绿色", value: "text-positive", color: "positive" },
-        { label: "黄色", value: "text-warning", color: "warning" },
-        { label: "靛蓝色", value: "text-indigo", color: "indigo" },
-      ];
+  { label: "黑色", value: "text-black", color: "black" },
+  { label: "蓝色", value: "text-primary", color: "primary" },
+  { label: "紫色", value: "text-accent", color: "accent" },
+  { label: "红色", value: "text-negative", color: "negative" },
+  { label: "绿色", value: "text-positive", color: "positive" },
+  { label: "黄色", value: "text-warning", color: "warning" },
+  { label: "靛蓝色", value: "text-indigo", color: "indigo" },
+];
 
 const $q = useQuasar();
 
@@ -331,11 +333,11 @@ const confirmDel = (id) => {
     ok: {
       push: true,
       label: "确定",
-      color: "blue-7",
+      color: "green",
     },
     cancel: {
       push: true,
-      color: "grey-5",
+      color: "blue-grey",
       label: "取消",
     },
   })
@@ -365,15 +367,18 @@ const editTask = (list) => {
     ok: {
       push: true,
       label: "确定",
-      color: "blue-7",
+      color: "green",
     },
     cancel: {
       push: true,
-      color: "grey-5",
+      color: "blue-grey",
       label: "取消",
     },
   })
     .onOk((data) => {
+      if (data === "") {
+        return failureTip("内容不能为空");
+      }
       store
         .editTodo("todo", list._id, data)
         .then(() => {
@@ -402,22 +407,22 @@ const colorDialog = (list) => {
     ok: {
       push: true,
       label: "确定",
-      color: "blue-7",
-      
+      color: "green",
     },
     cancel: {
       push: true,
-      color: "grey-5",
+      color: "blue-grey",
       label: "取消",
     },
   }).onOk((color) => {
-    store.editTodo('color', list._id, color)
+    store
+      .editTodo("color", list._id, color)
       .then(() => {
         successTip(store.systemMsg);
       })
       .catch((err) => {
         failureTip(store.systemMsg);
-      })
+      });
   });
 };
 </script>

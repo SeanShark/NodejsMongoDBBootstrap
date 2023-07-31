@@ -5,24 +5,12 @@
     </h5>
 
     <div class="text-body1">
-      <p>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolore voluptate
-        debitis facilis, asperiores magni in, placeat nostrum molestias cumque
-        distinctio explicabo non deserunt? Rerum praesentium officia, consequuntur
-        eveniet esse fugiat.
-      </p>
-      <p>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolore voluptate
-        debitis facilis, asperiores magni in, placeat nostrum molestias cumque
-        distinctio explicabo non deserunt? Rerum praesentium officia, consequuntur
-        eveniet esse fugiat.
-      </p>
-      <p>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolore voluptate
-        debitis facilis, asperiores magni in, placeat nostrum molestias cumque
-        distinctio explicabo non deserunt? Rerum praesentium officia, consequuntur
-        eveniet esse fugiat.
-      </p>
+      <div v-for="n in 100" :key="n" class="q-py-xs">
+        Lorem ipsum dolor sit amet, consectetur adipisicing
+        elit, sed do eiusmod tempor incididunt ut labore et
+        dolore magna aliqua.
+      </div>
+      
     </div>
   </q-page>
 </template>

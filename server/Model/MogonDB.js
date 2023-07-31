@@ -29,7 +29,7 @@ mongoose
     isDone: {
       type: Boolean,
       default: false,
-    }
+    },
   });
 
 

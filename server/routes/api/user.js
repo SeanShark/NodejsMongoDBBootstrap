@@ -15,9 +15,9 @@ router.get("/captcha", async ( req, res) => {
     ignoreChars: '0o1ilIgqp',
     noise: 2,
     color: true,
-    background: '#cc9966',
-    height: 40,
-    width: 160,
+    background: '#d6d6d6',
+    height: 54,
+    width: 140,
   });
 
   res.type('svg');
@@ -218,14 +218,14 @@ router.post("/login", async (req, res, next) => {
     .then((user) => {
       if (!user) {
         return res.status(401).json({
-          status: "error",
+          status: "nameError",
           msg: "没有此用户.",
         });
       }
 
       if (!bcrypt.compareSync(req.body.password, user.password)) {
         return res.status(401).json({
-          status: "error",
+          status: "pwdError",
           msg: "密码错误.",
         });
       }
@@ -314,6 +314,7 @@ router.post("/forgot", async (req, res, next) => {
         status: "error",
         msg: "该邮箱账户不存在.",
       });
+      // res.status(401).send("邮箱账户不存在.");
       return;
     });
 });
@@ -358,12 +359,12 @@ router.post("/resetpassword", async (req, res) => {
   })
     .then((user) => {
       if (user) {
-        if (bcrypt.compareSync(password, user.password)) {
-          return res.status(401).json({
-            status: "error",
-            msg: "密码与前密码一致.",
-          });
-        }
+        // if (bcrypt.compareSync(password, user.password)) {
+        //   return res.status(401).json({
+        //     status: "error",
+        //     msg: "密码与前密码一致.",
+        //   });
+        // }
 
         user.password = bcrypt.hashSync(password, 10);
         user.forgotCode = "";
@@ -371,14 +372,14 @@ router.post("/resetpassword", async (req, res) => {
           .then(() => {
             res.status(201).json({
               status: "success",
-              msg: "密码重置成功，请到登录页进行登录.",
+              msg: "密码重置成功，3秒后自动转到登录页.",
             });
           })
           .catch(err => console.log(err))
 
       } else {
         res.status(401).json({
-          status: "success",
+          status: "error",
           msg: "验证错误，请重试.",
         });
       }

@@ -29,6 +29,8 @@
             hide-bottom-space
             :error="errorDate.hasError"
             :loading="isLoading"
+            @keyup.enter="goToNextStep"
+
           >
             <template #before>
               <q-icon color="teal" name="mail" />
@@ -47,8 +49,8 @@
               label="验证码"
             >
               <template #before>
-                <q-icon v-if="captcha.state" name="lock" color="grey" />
-                <q-icon v-else name="lock_open" color="grey" />
+                <q-icon v-if="captcha.state" name="lock" color="grey"/>
+                <q-icon v-else name="lock_open" color="grey"/>
               </template>
               <template #after>
                 <div
@@ -60,8 +62,8 @@
               <template #error>
                 {{ captcha.errorMsg }}
               </template>
-              <template #append>
-                <q-icon v-if="!captcha.state" name="done" color="green" />
+              <template  #append>
+                <q-icon v-if="!captcha.state" name="done" color="green"/>
               </template>
             </q-input>
           </div>
@@ -81,7 +83,7 @@
             v-model="userInfo.code"
             filled
             type="text"
-            label="重置码"
+            label="注册码"
             class="q-py-md"
             bottom-slots
             hide-bottom-space
@@ -100,7 +102,7 @@
 
       <q-step
         :name="3"
-        title="重置密码"
+        title="设置密码"
         icon="password"
         style="min-height: 200px"
       >
@@ -168,17 +170,14 @@
       </template>
 
       <template #message>
-        <q-banner v-if="step === 1" class="bg-blue-grey-6 text-white q-px-lg">
-          请输入邮箱地址：
+        <q-banner v-if="step === 1" class="bg-indigo text-white q-px-lg">
+          请输入要注册的邮箱地址：
         </q-banner>
-        <q-banner
-          v-else-if="step === 2"
-          class="bg-blue-grey-6 text-white q-px-lg"
-        >
-          请查收邮箱新邮件，并输入6位重置码：
+        <q-banner v-else-if="step === 2" class="bg-indigo-5 text-white q-px-lg">
+          请查收邮箱新邮件，并输入6位注册码：
         </q-banner>
-        <q-banner v-else class="bg-blue-grey-6 text-white q-px-lg">
-          请设置新密码：
+        <q-banner v-else class="bg-indigo-5 text-white q-px-lg">
+          请设置至少8位的密码：
         </q-banner>
       </template>
     </q-stepper>
@@ -208,12 +207,13 @@ const emailRef = ref(null);
 const codeRef = ref(null);
 const passwordRef = ref(null);
 const repeatpwdRef = ref(null);
+const stepperRef = ref(null);
 const errorDate = reactive({
   hasError: false,
   errorMsg: "",
 });
 
-const stepperRef = ref(null);
+
 
 const checkPassword = (val) => {
   return val.length >= 8 || "密码长度应该至少为8位数";
@@ -227,7 +227,6 @@ const goToNextStep = async () => {
   if (step.value === 1) {
     errorDate.hasError = false;
     captcha.hasError = false;
-
     if (!userInfo.email) {
       errorDate.errorMsg = "请输入邮箱地址";
       errorDate.hasError = true;
@@ -241,30 +240,30 @@ const goToNextStep = async () => {
         errorDate.hasError = false;
         isLoading.value = true;
         await axios
-          .post("/user/forgot", {
+          .post("/user/signup", {
             email: userInfo.email,
           })
-          .then(async () => {
+          .then(async (res) => {
             isLoading.value = false;
-            successTip("验证码已发至您邮箱，请查收");
+            successTip(res.data.msg);
             return stepperRef.value.next();
           })
           .catch((err) => {
             errorDate.errorMsg =
-              err.response.data && err.response.data.msg
-                ? err.response.data.msg
-                : "未知错误, 请重试.";
+            err.response.data && err.response.data.msg
+            ? err.response.data.msg
+            : "未知错误, 请重试.";
             errorDate.hasError = true;
             isLoading.value = false;
           });
       } else {
-        errorDate.hasError = true;
         errorDate.errorMsg = "非法邮箱地址";
+        errorDate.hasError = true;
       }
     } else {
       if (captcha.Data.length === 0) {
         captcha.hasError = true;
-        captcha.errorMsg = "请先完成图形验证码";
+        captcha.errorMsg = "请完成图形验证码";
       } else if (captcha.Data.length === 4) {
         captcha.hasError = true;
         captcha.errorMsg = "图形验证码错误";
@@ -273,13 +272,12 @@ const goToNextStep = async () => {
         captcha.errorMsg = "图形验证码长度为4位字符";
       }
     }
-    // stepperRef.value.next();
   } else if (step.value === 2) {
     if (userInfo.code.length === 6) {
       errorDate.hasError = false;
       isLoading.value = true;
       await axios
-        .post("/user/verifyforgotcode", {
+        .post("/user/verifysignup", {
           email: userInfo.email,
           code: userInfo.code,
         })
@@ -292,8 +290,8 @@ const goToNextStep = async () => {
         })
         .catch((err) => {
           isLoading.value = false;
-          errorDate.hasError = true;
           errorDate.errorMsg = err.response.data.msg;
+          errorDate.hasError = true;
         });
     } else {
       isLoading.value = false;
@@ -308,7 +306,7 @@ const goToNextStep = async () => {
     ) {
       isLoading.value = true;
       await axios
-        .post("/user/resetpassword", {
+        .post("/user/setpassword", {
           email: userInfo.email,
           code: userInfo.code,
           password: userInfo.password,

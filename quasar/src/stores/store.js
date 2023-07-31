@@ -7,9 +7,9 @@ export const useUserStore = defineStore("userinfo", {
     authUser: null,
     isDisabled: false,
     postStatus: false,
-    counter: 100,
-    todolistsDone: [],
-    todolistsNotyet: [],
+    todolists: [],
+    doingLists: [],
+    doneLists: [],
     systemMsg: "",
   }),
   getters: {
@@ -50,28 +50,20 @@ export const useUserStore = defineStore("userinfo", {
       localStorage.clear();
       store.authUser = null;
     },
-    getTodolistsNotyet () {
+    getTodolists () {
       return new Promise(async (resolve, reject) => {
-        await axios.post("/todo/gettodolistsnotyet", {
+        await axios.post("/todo/gettodolists", {
           owner: this.user.email
         })
         .then((res) => {
-          this.todolistsNotyet = res.data
-          resolve();
-        })
-        .catch((err) => {
-          console.log(err);
-          reject(err);
-        })
-      })
-    },
-    getTodolistsDone () {
-      return new Promise(async (resolve, reject) => {
-        await axios.post("/todo/gettodolistsdone", {
-          owner: this.user.email
-        })
-        .then((res) => {
-          this.todolistsDone = res.data
+          this.todolists = res.data;
+          this.doingLists = this.todolists.filter(lists => {
+            return lists.isDone === false;
+          })
+          this.doneLists = this.todolists.filter(lists => {
+            return lists.isDone === true;
+          })
+
           resolve();
         })
         .catch((err) => {
@@ -85,7 +77,7 @@ export const useUserStore = defineStore("userinfo", {
         await axios.post("/todo/addtodo/", todoData)
         .then((res) => {
           this.systemMsg = res.data.msg;
-          this.getTodolistsNotyet();
+          this.getTodolists();
           resolve();
         })
         .catch((err) => {
@@ -103,8 +95,7 @@ export const useUserStore = defineStore("userinfo", {
         })
         .then((res) => {
           this.systemMsg = res.data.msg;
-          this.getTodolistsNotyet();
-          this.getTodolistsDone();
+          this.getTodolists();
           resolve();
         })
         .catch((err) => {
@@ -119,8 +110,7 @@ export const useUserStore = defineStore("userinfo", {
         await axios.delete(`/todo/${id}`)
         .then((res) => {
           this.systemMsg = res.data.msg;
-          this.getTodolistsDone();
-          this.getTodolistsNotyet();
+          this.getTodolists();
           resolve();
         })
         .catch((err) => {

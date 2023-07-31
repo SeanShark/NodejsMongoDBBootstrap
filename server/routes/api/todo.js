@@ -3,7 +3,7 @@ const { Todo } = require("../../Model/MogonDB");
 
 const router = express.Router();
 
-router.post("/gettodolistsnotyet", async (req, res) => {
+router.post("/gettodolists", async (req, res) => {
   const owner = req.body.owner;
   if (!owner) {
     return res.status(400).json({
@@ -13,27 +13,8 @@ router.post("/gettodolistsnotyet", async (req, res) => {
   }
 
   try {
-    res.status(201).send(await Todo.find({ owner: owner }).where('isDone').equals('false'));
-  } catch (error) {
-    // Handle errors
-    return res.status(500).json({
-      status: "error",
-      msg: "内部错误，请重试."
-    });
-  }
-});
-
-router.post("/gettodolistsdone", async (req, res) => {
-  const owner = req.body.owner;
-  if (!owner) {
-    return res.status(400).json({
-      status: "error",
-      msg: "缺少关键内容",
-    });
-  }
-
-  try {
-    res.status(201).send(await Todo.find({ owner: owner }).where('isDone').equals('true'));
+    res.status(201).send(await Todo.find({ owner: owner }).sort({createdAt: 'descending'}));
+    //res.status(201).send(await Todo.find({ owner: owner }).where('isDone').equals('false').sort({createdAt: 'descending'}));
   } catch (error) {
     // Handle errors
     return res.status(500).json({
