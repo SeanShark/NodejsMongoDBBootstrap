@@ -66,7 +66,7 @@
                 :error="loginInfo.pwdError"
               >
                 <template #before>
-                  <q-icon name="password" />
+                  <q-icon name="lock" />
                 </template>
                 <template #append>
                   <q-icon
@@ -116,13 +116,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useUserStore } from "src/stores/store";
 import { useRouter } from "vue-router";
-import axios from "axios";
-import { useQuasar } from "quasar";
-
-const $q = useQuasar();
 
 const store = useUserStore();
 const router = useRouter();
@@ -154,6 +150,7 @@ const loginInfo = reactive({
 const loginSubmit = async () => {
   loginInfo.nameError = false;
   loginInfo.pwdError = false;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!loginInfo.email) {
     loginInfo.nameError = true;
@@ -163,60 +160,43 @@ const loginSubmit = async () => {
     return loginInfo.errorMsg = "密码不能为空";
   } 
   
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (emailPattern.test(loginInfo.email)) {
-    isLoading.value = true;
-    await axios
-      .post("/user/login", loginInfo)
-      .then(async (res) => {
-        if (res.status === 200) {
-          localStorage.setItem("token", res.data.token);
-          await store
-            .verifyUser()
-            .then(() => {
-              isLoading.value = false;
-              successTip("成功登录");
-              router.push("/");
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        }
-      })
-      .catch((err) => {
-        // failureTip(err.response.data.msg);
-        isLoading.value = false;
-        if (err.response.data.status === "nameError") {
-          loginInfo.nameError = true;
-          loginInfo.errorMsg = err.response.data.msg;
-        } else if (err.response.data.status === "pwdError") {
-          loginInfo.pwdError = true;
-          loginInfo.errorMsg = err.response.data.msg;
-        } else {
-          failureTip("未知错误，请重试.");
-        }
-      });
-  } else {
+  if (!emailPattern.test(loginInfo.email)) {
     loginInfo.nameError = true;
     loginInfo.errorMsg = "非法邮箱地址";
+    return;
   }
+  isLoading.value = true;
+  await store.axios
+    .post("/user/login", loginInfo)
+    .then(async (res) => {
+      if (res.status === 200) {
+        localStorage.setItem("token", res.data.token);
+        await store
+          .verifyUser()
+          .then(() => {
+            isLoading.value = false;
+            store.successTip("成功登录");
+            router.push("/");
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      }
+    })
+    .catch((err) => {
+      isLoading.value = false;
+      if (err.response.data.status === "nameError") {
+        loginInfo.nameError = true;
+        loginInfo.errorMsg = err.response.data.msg;
+      } else if (err.response.data.status === "pwdError") {
+        loginInfo.pwdError = true;
+        loginInfo.errorMsg = err.response.data.msg;
+      } else {
+        store.store.failureTip(err.response.data.msg);
+      }
+    });
 };
 
-const successTip = (msg) => {
-  $q.notify({
-    type: "positive",
-    progress: true,
-    message: `${msg}`,
-  });
-};
-
-const failureTip = (msg) => {
-  $q.notify({
-    type: "negative",
-    progress: true,
-    message: `${msg}`,
-  });
-};
 </script>
 
 <style lang="sass" scoped></style>

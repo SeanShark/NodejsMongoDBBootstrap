@@ -9,6 +9,7 @@ const routes = [
       { path: '/forgot', component: () => import('pages/ForgotPage.vue'), name: "密码重置" },
       { path: '/register', component: () => import('pages/RegisterPage.vue'), name: "注册页" },
       { path: '/query', component: () => import('pages/QueryPage.vue'), name: "查询页" },
+      { path: '/logger', component: () => import('pages/LoggerPage.vue'), name: "日志页" },
       { path: '/setting', component: () => import('pages/SettingPage.vue'), name: "设置页" },
     ]
   },

@@ -65,7 +65,7 @@
                 :item="list"
                 :index="index"
                 clickable
-                @dblclick="editTask(list)"
+                
               >
                 <q-item-section avatar>
                   <q-checkbox
@@ -77,7 +77,7 @@
                 </q-item-section>
                 <q-item-section>
                   <q-item-label>
-                    <div :class="list.color" class="text-subtitle1">
+                    <div :class="list.color" class="text-body2">
                       {{ list.todo }}
                     </div>
                     <div class="text-italic">
@@ -149,7 +149,7 @@
                 :item="list"
                 :index="index"
                 clickable
-                @dblclick="editTask(list)"
+                
               >
                 <q-item-section avatar>
                   <q-checkbox
@@ -162,6 +162,9 @@
                   <q-item-label>
                     <div :class="list.color">{{ list.todo }}</div>
                   </q-item-label>
+                  <div class="text-italic">
+                      {{ list.createdAt }}
+                    </div>
                 </q-item-section>
 
                 <q-btn-dropdown
@@ -226,7 +229,6 @@
 <script setup>
 import { onMounted, ref, reactive } from "vue";
 import { useUserStore } from "../stores/store";
-import { useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 import { date } from "quasar";
 
@@ -238,16 +240,14 @@ const inputRef = ref(null);
 onMounted(async () => {
   let token = localStorage.getItem("token");
 
-  store.getTodolists();
-
   if (token !== null) {
     try {
-      await store.verifyUser();
-      if (!store.user) {
-        router.push("/index");
-      } else {
+      await store.verifyUser()
+      .then(() => {
         store.getTodolists();
-      }
+      }).catch(() => {
+        router.push("/index");
+      })
     } catch (err) {
       router.push("/index");
     }
@@ -274,10 +274,10 @@ const createTodo = async () => {
       .then(() => {
         todoData.todo = "";
         todoData.color = "text-black";
-        successTip(store.systemMsg);
+        store.successTip(store.systemMsg);
       })
       .catch(() => {
-        failureTip(store.systemMsg);
+        store.failureTip(store.systemMsg);
       });
   }
 };
@@ -287,11 +287,11 @@ const handleClick = (field, id, value) => {
     store
       .editTodo(field, id, value)
       .then(() => {
-        successTip(store.systemMsg);
+        store.successTip(store.systemMsg);
         store.getTodolists();
       })
       .catch(() => {
-        failureTip(store.systemMsg);
+        store.failureTip(store.systemMsg);
       });
   }, 300);
 };
@@ -306,26 +306,9 @@ const colorPanel = [
   { label: "靛蓝色", value: "text-indigo", color: "indigo" },
 ];
 
-const $q = useQuasar();
-
-const successTip = (msg) => {
-  $q.notify({
-    type: "positive",
-    progress: true,
-    message: `${msg}`,
-  });
-};
-
-const failureTip = (msg) => {
-  $q.notify({
-    type: "negative",
-    progress: true,
-    message: `${msg}`,
-  });
-};
 
 const confirmDel = (id) => {
-  $q.dialog({
+  store.$q.dialog({
     title: "确定",
     message: `确定要删除记录?`,
     cancel: true,
@@ -345,17 +328,17 @@ const confirmDel = (id) => {
       await store
         .deleteTodo(id)
         .then(() => {
-          successTip(store.systemMsg);
+          store.successTip(store.systemMsg);
         })
         .catch((err) => {
-          failureTip(store.systemMsg);
+          store.failureTip(store.systemMsg);
         });
     })
     .onCancel(() => {});
 };
 
 const editTask = (list) => {
-  $q.dialog({
+  store.$q.dialog({
     title: "编辑内容",
     message: "请输入需要编辑的内容",
     prompt: {
@@ -377,22 +360,22 @@ const editTask = (list) => {
   })
     .onOk((data) => {
       if (data === "") {
-        return failureTip("内容不能为空");
+        return store.failureTip("内容不能为空");
       }
       store
         .editTodo("todo", list._id, data)
         .then(() => {
-          successTip(store.systemMsg);
+          store.successTip(store.systemMsg);
         })
         .catch(() => {
-          failureTip(store.systemMsg);
+          store.failureTip(store.systemMsg);
         });
     })
     .onCancel(() => {});
 };
 
 const colorDialog = (list) => {
-  $q.dialog({
+  store.$q.dialog({
     title: "选择颜色",
     message: "选择你需要改变的颜色",
     options: {
@@ -418,16 +401,16 @@ const colorDialog = (list) => {
     store
       .editTodo("color", list._id, color)
       .then(() => {
-        successTip(store.systemMsg);
+        store.successTip(store.systemMsg);
       })
       .catch((err) => {
-        failureTip(store.systemMsg);
+        store.failureTip(store.systemMsg);
       });
   });
 };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .no-tasks {
   opacity: 0.5;
 }

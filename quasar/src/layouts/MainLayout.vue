@@ -1,7 +1,7 @@
 <template>
   <div >
     
-      <q-layout view="HHh Lpr lFf">
+      <q-layout view="hHh Lpr lFf">
         <q-header v-if="store.user">
           <q-toolbar>
             <q-btn
@@ -40,7 +40,7 @@
         <q-drawer
           v-if="store.user"
           v-model="leftDrawerOpen"
-          :width="250"
+          :width="store.isMobile? 250 : 320"
           show-if-above
           bordered
           class="shadow-3"
@@ -67,6 +67,13 @@
 
               <q-item-section class="text-weight-bold">查询</q-item-section>
             </q-item>
+            <q-item v-ripple clickable to="/logger" exact>
+              <q-item-section avatar>
+                <q-icon name="edit_note" size="xs" color="primary" />
+              </q-item-section>
+
+              <q-item-section class="text-weight-bold">日志</q-item-section>
+            </q-item>
 
             <q-item v-ripple to="/setting" clickable exact>
               <q-item-section avatar>
@@ -90,17 +97,14 @@
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "../stores/store";
-import { useQuasar } from "quasar";
+
+const store = useUserStore();
 
 const route = useRoute();
 const router = useRouter();
 
-const store = useUserStore();
-
-const $q = useQuasar();
-
 const confirmLogout = () => {
-  $q.dialog({
+  store.$q.dialog({
     title: "确定",
     message: `确定要退出当前账号吗?`,
     cancel: true,

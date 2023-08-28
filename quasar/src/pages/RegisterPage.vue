@@ -7,7 +7,7 @@
       color="primary"
       animated
       transition-next="fade"
-      :contracted="$q.platform.is.mobile"
+      :contracted="store.isMobile"
       style="max-width: 600px"
     >
       <q-step
@@ -119,7 +119,7 @@
             :rules="[checkPassword]"
           >
             <template #before>
-              <q-icon name="password" />
+              <q-icon name="lock" />
             </template>
             <template #append>
               <q-icon
@@ -144,7 +144,7 @@
             :rules="repeatpwdRule"
           >
             <template #before>
-              <q-icon name="password" />
+              <q-icon name="lock" />
             </template>
             <template #append>
               <q-icon
@@ -185,12 +185,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from "vue";
-import axios from "axios";
+import { ref, reactive, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useUserStore } from "../stores/store";
 
-import { useQuasar } from "quasar";
-
+const store = useUserStore();
 const userInfo = reactive({
   email: "",
   code: "",
@@ -239,13 +238,13 @@ const goToNextStep = async () => {
       if (emailPattern.test(userInfo.email)) {
         errorDate.hasError = false;
         isLoading.value = true;
-        await axios
+        await store.axios
           .post("/user/signup", {
             email: userInfo.email,
           })
           .then(async (res) => {
             isLoading.value = false;
-            successTip(res.data.msg);
+            store.successTip(res.data.msg);
             return stepperRef.value.next();
           })
           .catch((err) => {
@@ -276,14 +275,14 @@ const goToNextStep = async () => {
     if (userInfo.code.length === 6) {
       errorDate.hasError = false;
       isLoading.value = true;
-      await axios
+      await store.axios
         .post("/user/verifysignup", {
           email: userInfo.email,
           code: userInfo.code,
         })
         .then(async (res) => {
           if (res.data.status === "success") {
-            successTip(res.data.msg);
+            store.successTip(res.data.msg);
             isLoading.value = false;
             stepperRef.value.next();
           }
@@ -305,7 +304,7 @@ const goToNextStep = async () => {
       (await repeatpwdRef.value?.validate())
     ) {
       isLoading.value = true;
-      await axios
+      await store.axios
         .post("/user/setpassword", {
           email: userInfo.email,
           code: userInfo.code,
@@ -318,7 +317,7 @@ const goToNextStep = async () => {
             setTimeout(() => {
               router.push("/index");
             }, 3000);
-            successTip(res.data.msg);
+            store.successTip(res.data.msg);
           }
         })
         .catch((err) => {
@@ -345,7 +344,7 @@ onMounted(() => {
 
 const getcapcha = () => {
   captcha.state = true;
-  axios.get(`/user/captcha?${Math.random()}`).then((res) => {
+  store.axios.get(`/user/captcha?${Math.random()}`).then((res) => {
     captcha.Url = res.data.data;
     captcha.text = res.headers["captcha"].toLowerCase();
   });
@@ -357,31 +356,13 @@ watch(
     if (newValue.toLowerCase() === captcha.text) {
       captcha.state = false;
       captcha.hasError = false;
-      //successTip("验证通过,请输入您的邮箱地址");
+      //store.successTip("验证通过,请输入您的邮箱地址");
     } else {
       captcha.state = true;
     }
   }
 );
 /* */
-
-const $q = useQuasar();
-
-const successTip = (msg) => {
-  $q.notify({
-    type: "positive",
-    progress: true,
-    message: `${msg}`,
-  });
-};
-
-const failureTip = (msg) => {
-  $q.notify({
-    type: "negative",
-    progress: true,
-    message: `${msg}`,
-  });
-};
 </script>
 
 <style lang="sass" scoped></style>
