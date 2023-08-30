@@ -1,6 +1,5 @@
 <template>
-  <q-page  class="q-pa-sm column" >
-    <h5 class="q-mt-none q-mb-md text-center">日 志</h5>
+  <q-page class="q-pa-xs column">
     <div class="row q-pa-xs">
       <div class="col-12">
         <div class="column items-center">
@@ -10,13 +9,83 @@
             :landscape="store.$q.screen.gt.md"
             :events="events"
             years-in-month-view
+            :color="themeColor"
+            :event-color="eventColor"
             today-btn
+            style="width: 100%; max-width: 550px"
           >
+            <div class="row justify-end">
+              <q-btn label="设置" flat>
+                <q-popup-proxy>
+                  <q-banner style="height: 250px; width: 320px;">
+                    <div class="q-gutter-sm">
+                      <q-select
+                        v-model="monthRange"
+                        outlined
+                        dense
+                        :options="monthOption"
+                        transition-show="jump-up"
+                        transition-hide="jump-up"
+                      >
+                        <template #before>
+                          <div class="text-subtitle2">选择范围：</div>
+                        </template>
+                        <template #prepend>
+                          <div class="text-subtitle2">最近：</div>
+                        </template>
+                        <template #append>
+                          <div class="text-subtitle2">月</div>
+                        </template>
+                        <template #after>
+                          <q-btn v-close-popup flat icon="done" color="primary" @click="getLoggerList"/>
+                        </template>
+                      </q-select>
+                      
+                      <q-select
+                        v-model="themeColor"
+                        outlined
+                        dense
+                        :options="colorOptions"
+                        transition-show="jump-up"
+                        transition-hide="jump-up"
+                      >
+                        <template #before>
+                          <div class="text-subtitle2">日历颜色：</div>
+                        </template>
+                        <template #prepend>
+                          <div class="text-subtitle2"></div>
+                        </template>
+                        <template #append>
+                          <div class="text-subtitle2"></div>
+                        </template>
+                      </q-select>
+                      <q-select
+                        v-model="eventColor"
+                        outlined
+                        dense
+                        :options="colorOptions"
+                        transition-show="jump-up"
+                        transition-hide="jump-up"
+                      >
+                        <template #before>
+                          <div class="text-subtitle2">事件颜色：</div>
+                        </template>
+                        <template #prepend>
+                          <div class="text-subtitle2"></div>
+                        </template>
+                        <template #append>
+                          <div class="text-subtitle2"></div>
+                        </template>
+                      </q-select>
+                    </div>
+                  </q-banner>
+                </q-popup-proxy>
+              </q-btn>
+            </div>
           </q-date>
         </div>
       </div>
       <div class="col-12">
-
         <q-input
           v-model="loggerData.logger"
           outlined
@@ -24,11 +93,14 @@
           autogrow
           class="q-py-md"
           placeholder="记录点事情吧..."
-          @focus="inputLight = 'orange'"
-          @blur="inputLight = 'grey'"
+          @focus="inputLight = true"
+          @blur="inputLight = false"
         >
           <template #prepend>
-            <q-icon name="tips_and_updates" :color="inputLight" />
+            <q-icon
+              :name="inputLight ? 'tips_and_updates' : 'lightbulb'"
+              :color="inputLight ? 'orange' : 'grey'"
+            />
           </template>
           <template #append>
             <q-btn
@@ -41,7 +113,7 @@
             />
           </template>
         </q-input>
-        <div v-if="!isEmtpy" class="no-tasks text-center" style="height: 100%;">
+        <div v-if="!isLogged" class="no-tasks text-center" style="height: 100%">
           <q-icon name="psychology_alt" size="150px" color="primary" />
         </div>
         <q-tab-panels
@@ -68,15 +140,15 @@
                 <div class="text-h5">{{ list.date }}</div>
                 <q-space />
                 <q-btn
-                  v-if="visible"
+                  v-if="visibleBtn"
                   label="修 改"
                   class="q-px-md"
                   color="primary"
                   :disable="isDisable"
-                  @click="editLogger(list._id, list.logger, index)"
+                  @click="editLogger(list._id, list.logger, list.date, index)"
                 ></q-btn>
                 <q-btn
-                  v-if="visible"
+                  v-if="visibleBtn"
                   label="取 消"
                   class="q-px-md"
                   color="grey"
@@ -87,9 +159,9 @@
               <q-editor
                 v-model="list.logger"
                 :dense="$q.screen.lt.md"
+                :readonly="readonlyEditor"
                 :toolbar="[
                   ['fullscreen'],
-                  ['viewsource'],
                   [
                     {
                       label: '功能',
@@ -98,15 +170,24 @@
                       fixedLabel: true,
                       list: 'only-icons',
                       options: [
+                        'left',
+                        'center',
+                        'right',
+                        'justify',
                         'bold',
                         'italic',
                         'strike',
+                        'quote',
                         'underline',
                         'unordered',
                         'ordered',
+                        'outdent',
+                        'indent',
                         'print',
                         'hr',
                         'link',
+                        'undo',
+                        'redo',
                       ],
                     },
                   ],
@@ -130,6 +211,8 @@
                     },
                     'removeFormat',
                   ],
+                  ['viewsource'],
+                  ['edit'],
                 ]"
                 :fonts="{
                   arial: 'Arial',
@@ -143,6 +226,16 @@
                 }"
                 @input="onEditorInput(index)"
               >
+                <template #edit>
+                  <q-btn
+                    icon="edit"
+                    color="primary"
+                    size="sm"
+                    flat
+                    padding="none"
+                    @click="readonlyEditor = false"
+                  />
+                </template>
               </q-editor>
             </form>
           </q-tab-panel>
@@ -158,49 +251,64 @@ import { useUserStore } from "../stores/store";
 
 const store = useUserStore();
 
-const inputLight = ref("grey");
+const inputLight = ref(false);
 const selectedDate = ref(store.todayDate);
 const loggerLists = ref([]);
 const events = ref([]);
-const visible = ref(false);
-const isEmtpy = ref(false);
+const eventColor = ref('orange');
+const themeColor = ref('primary');
+
+const monthRange = ref(1);
+const visibleBtn = ref(false);
+const readonlyEditor = ref(true);
+const isLogged = ref(false);
 const initialLoggerContent = ref([]);
 const isDisable = ref(false);
+const monthOption = [1, 3, 6, "全部"];
+const colorOptions = [
+  'primary',
+  'orange',
+  'green',
+  'teal',
+  'brown',
+  'purple',
+]
 const loggerData = reactive({
-        _id: "",
-        date: "",
-        user: "",
-        logger: "",
-      });
+  _id: "",
+  date: "",
+  user: "",
+  logger: "",
+});
 
-watch(() => selectedDate.value, (newValue) => {
-  for (const date of events.value) {
-    if (newValue === date) {
-      isEmtpy.value = true;
-      break;
-    } else {
-      isEmtpy.value = false;
+watch(
+  () => selectedDate.value,
+  (newValue) => {
+    for (const date of events.value) {
+      if (newValue === date) {
+        isLogged.value = true;
+        break;
+      } else {
+        isLogged.value = false;
+      }
     }
   }
-})
-
+);
 
 const getLoggerList = async () => {
   await store.axios
     .get("/query/logger", {
       params: {
         user: store.user.email,
-        date: store.todayDate,
+        month: monthRange.value,
       },
     })
     .then((res) => {
       loggerLists.value = res.data;
       initialLoggerContent.value = loggerLists.value.map((list) => list.logger);
-      // console.log(res.data);
       events.value = loggerLists.value.map((item) => item.date);
     })
     .catch((err) => {
-      console.log(err.response.data);
+      store.failureTip(err.response.data.msg);
     });
 };
 
@@ -208,15 +316,15 @@ const onEditorInput = (index) => {
   const currentLoggerContent = loggerLists.value[index].logger;
   const initialContent = initialLoggerContent.value[index];
   if (currentLoggerContent !== initialContent) {
-    visible.value = true;
+    visibleBtn.value = true;
   } else {
-    visible.value = false;
+    visibleBtn.value = false;
   }
 };
 
 const onCancel = (index) => {
   loggerLists.value[index].logger = initialLoggerContent.value[index];
-  visible.value = false;
+  visibleBtn.value = false;
 };
 
 const addLogger = async () => {
@@ -227,94 +335,112 @@ const addLogger = async () => {
     await store.axios
       .post("/query/addlogger", loggerData)
       .then((res) => {
-        loggerData._id = res.data.id;
-        loggerData.logger = res.data.logger ? res.data.logger + "<ul><li>" + loggerData.logger + "</li></ul>" : "<ul><li>" + loggerData.logger + "</li></ul>"
+        if (res.data.id) {
+          loggerData._id = res.data.id;
+        }
+        if (res.data.logger) {
+          loggerData.logger =
+            res.data.logger + "<ul><li>" + loggerData.logger + "</li></ul>";
+        } else {
+          loggerData.logger = "<ul><li>" + loggerData.logger + "</li></ul>";
+        }
         loggerLists.value.unshift(JSON.parse(JSON.stringify(loggerData)));
-        initialLoggerContent.value = loggerLists.value.map((list) => list.logger);
+        initialLoggerContent.value = loggerLists.value.map(
+          (list) => list.logger
+        );
         // console.log(res.data);
         events.value = loggerLists.value.map((item) => item.date);
         store.successTip(res.data.msg);
-        isEmtpy.value = true;
+        console.log(loggerLists.value);
+        isLogged.value = true;
       })
       .catch((err) => {
         console.log(err.response.data);
       })
       .finally(() => {
-        loggerData.date = "";
         loggerData.logger = "";
-        loggerData._id = "";
       });
-  } 
+  }
 };
 
-const editLogger = async (id, log, index) => {
-  if (log === '<br><ul><li>' || log === '<div><br></div>' || log.length === 0) {
+const editLogger = async (id, log, date, index) => {
+  if (log === "<br><ul><li>" || log === "<div><br></div>" || log.length === 0) {
     confirmDel(id, index);
-  }
-  else {
-    loggerData.id = id,
-    loggerData.user = store.user.email,
-    loggerData.logger = log,
-    
-    await store.axios
-      .post("/query/editlogger", loggerData)
-      .then((res) => {
-        loggerLists.value[index].logger = log;
-        initialLoggerContent.value[index] = log;
-        store.successTip(res.data.msg);
-      })
-      .catch((err) => {
-        store.failureTip(err.response.data.msg);
-      })
-      .finally(() => {
-        loggerData.date = "";
-        loggerData.logger = "";
-        loggerData._id = "";
-        visible.value = false;
-      });
+  } else {
+    (loggerData._id = id),
+      (loggerData.date = date),
+      (loggerData.user = store.user.email),
+      (loggerData.logger = log),
+      await store.axios
+        .post("/query/editlogger", loggerData)
+        .then((res) => {
+          loggerLists.value[index].logger = log;
+          initialLoggerContent.value = loggerLists.value.map(
+            (list) => list.logger
+          );
+          store.successTip(res.data.msg);
+        })
+        .catch((err) => {
+          store.failureTip(err.response.data.msg);
+        })
+        .finally(() => {
+          loggerData.date = "";
+          loggerData.logger = "";
+          loggerData._id = "";
+          visibleBtn.value = false;
+          readonlyEditor.value = true;
+        });
   }
 };
-
 
 const confirmDel = (id, index) => {
-  store.$q.dialog({
-    title: "确定",
-    message: `确定要删除记录?`,
-    cancel: true,
-    persistent: true,
-    ok: {
-      push: true,
-      label: "确定",
-      color: "green",
-    },
-    cancel: {
-      push: true,
-      color: "blue-grey",
-      label: "取消",
-    },
-  })
+  store.$q
+    .dialog({
+      title: "确定",
+      message: `确定要删除记录?`,
+      cancel: true,
+      persistent: true,
+      ok: {
+        push: true,
+        label: "确定",
+        color: "green",
+      },
+      cancel: {
+        push: true,
+        color: "blue-grey",
+        label: "取消",
+      },
+    })
     .onOk(async () => {
-      await store.axios.delete("/query/deletelogger", {
-          params: { 
+      await store.axios
+        .delete("/query/deletelogger", {
+          params: {
             id: id,
             user: store.user.email,
           },
         })
         .then((res) => {
           loggerLists.value.splice(index, 1);
-          initialLoggerContent.value = loggerLists.value.map((list) => list.logger);
+          initialLoggerContent.value = loggerLists.value.map(
+            (list) => list.logger
+          );
           events.value = loggerLists.value.map((item) => item.date);
           store.successTip(res.data.msg);
-          visible.value = false;
-          isEmtpy.value = false;
+          visibleBtn.value = false;
+          isLogged.value = false;
         })
         .catch((err) => {
           store.failureTip(err.response.data.msg);
         });
     })
-    .onCancel(() => {
+    .onCancel(() => {});
+};
 
-    });
+const calenderSetting = () => {
+  console.log("changeEventColor");
+};
+const changeThemeColor = async () => {
+  console.log("changeEventColor");
 };
 
 onMounted(async () => {
@@ -336,12 +462,11 @@ onMounted(async () => {
   } else {
     router.push("/index");
   }
-  isEmtpy.value = true;
+  isLogged.value = true;
 });
 </script>
 
 <style lang="scss">
-
 .no-tasks {
   opacity: 0.3;
 }

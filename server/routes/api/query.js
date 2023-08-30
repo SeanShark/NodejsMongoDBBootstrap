@@ -103,14 +103,15 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/logger", async (req, res) => {
-  if(!req.query.user) {
+  const user = req.query.user;
+  if(!user) {
     return res.status(401).json({
       status: "Error",
       msg: "未授权用户",
     });
   } else {
     const isAuthUser = DataBase.User.exists({
-      email: req.query.user,
+      email: user,
     });
     if (!isAuthUser) {
       return res.status(401).json({
@@ -119,19 +120,32 @@ router.get("/logger", async (req, res) => {
       });
     }
   }
-
   try {
-    const user = req.query.user;
-  
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-  
-    const result = await DataBase.Logger.find({
-      $and: [
-        { user: user },
-        { createdAt: { $gte: oneMonthAgo }}
-      ]
-    });
+    
+    
+    let result = [];
+    if (req.query.month === '全部') {
+      result = await DataBase.Logger.find({ user: user });
+    } else {
+      const monthOption = parseInt(req.query.month)
+      if (monthOption === 1 || monthOption === 3 || monthOption === 6) {
+        const MonthAgo = new Date();
+        MonthAgo.setMonth(MonthAgo.getMonth() - monthOption);
+      
+        result = await DataBase.Logger.find({
+          $and: [
+            { user: user },
+            { createdAt: { $gte: MonthAgo }}
+          ]
+        });
+      } else {
+        return res.status(401).json({
+          status: "Error",
+          msg: "错误搜索类型",
+        });
+      }
+    }
+    
     
     res.status(201).json(result);
   }
@@ -184,6 +198,7 @@ router.post("/addlogger", async (req, res) => {
       status: "success",
       msg: "日志成功增加.",
       logger: existingLogger.logger,
+      id: loggerExist,
     });
 
     // console.log(result.modifiedCount, "document(s) updated");
@@ -240,16 +255,23 @@ router.post("/editlogger", async (req, res) => {
       });
     }
   }
-
   try {
-    const id = req.body.id;
+    const id = req.body._id;
     const logger = req.body.logger;
     
-    const result = await DataBase.Logger.findOneAndUpdate({ _id: id }, { "logger": logger})
-    res.status(201).json({
-      status: "success",
-      msg: "日志成功修改.",
-    });
+    await DataBase.Logger.findOneAndUpdate({ _id: id }, { "logger": logger})
+    .then(() => {
+      res.status(201).json({
+        status: "success",
+        msg: "日志成功修改.",
+      });
+    })
+    .catch((err) => {
+      return res.status(401).json({
+        status: "Error",
+        msg: err.message,
+      });
+    })
   }
   catch (error) {
     // Handle errors

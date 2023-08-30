@@ -23,8 +23,12 @@ app.use('/api/user', Users);
 app.use('/api/todo', TodoLists);
 app.use('/api/query', Query);
 
-const port = process.env.PORT;
-const time = new Date();
+if (process.env.NODE_ENV === 'prodution') {
+  app.use(express.static(__dirname + '/public/'));
+  app.get(/.*/, (req, res) => res.sendFile(__dirname + '/public/index.html'));
+}
 
-app.listen(port, () => console.log(`Server started on port ${port}...Launch time: ${ time }`));
+const port = process.env.PORT;
+
+app.listen(port, () => console.log(`Server started on port ${port}...`));
  
