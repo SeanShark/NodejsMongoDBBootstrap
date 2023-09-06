@@ -16,6 +16,8 @@ export const useUserStore = defineStore("datastore", {
     todolists: [],
     doingLists: [],
     doneLists: [],
+    checkLists: [],
+    filteredLists: [],
     systemMsg: "",
     originalData: null,
     addBtnLoading: false,

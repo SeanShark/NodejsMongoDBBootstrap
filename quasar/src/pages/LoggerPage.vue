@@ -15,72 +15,7 @@
             style="width: 100%; max-width: 550px"
           >
             <div class="row justify-end">
-              <q-btn label="设置" flat>
-                <q-popup-proxy>
-                  <q-banner style="height: 250px; width: 320px;">
-                    <div class="q-gutter-sm">
-                      <q-select
-                        v-model="monthRange"
-                        outlined
-                        dense
-                        :options="monthOption"
-                        transition-show="jump-up"
-                        transition-hide="jump-up"
-                      >
-                        <template #before>
-                          <div class="text-subtitle2">选择范围：</div>
-                        </template>
-                        <template #prepend>
-                          <div class="text-subtitle2">最近：</div>
-                        </template>
-                        <template #append>
-                          <div class="text-subtitle2">月</div>
-                        </template>
-                        <template #after>
-                          <q-btn v-close-popup flat icon="done" color="primary" @click="getLoggerList"/>
-                        </template>
-                      </q-select>
-                      
-                      <q-select
-                        v-model="themeColor"
-                        outlined
-                        dense
-                        :options="colorOptions"
-                        transition-show="jump-up"
-                        transition-hide="jump-up"
-                      >
-                        <template #before>
-                          <div class="text-subtitle2">日历颜色：</div>
-                        </template>
-                        <template #prepend>
-                          <div class="text-subtitle2"></div>
-                        </template>
-                        <template #append>
-                          <div class="text-subtitle2"></div>
-                        </template>
-                      </q-select>
-                      <q-select
-                        v-model="eventColor"
-                        outlined
-                        dense
-                        :options="colorOptions"
-                        transition-show="jump-up"
-                        transition-hide="jump-up"
-                      >
-                        <template #before>
-                          <div class="text-subtitle2">事件颜色：</div>
-                        </template>
-                        <template #prepend>
-                          <div class="text-subtitle2"></div>
-                        </template>
-                        <template #append>
-                          <div class="text-subtitle2"></div>
-                        </template>
-                      </q-select>
-                    </div>
-                  </q-banner>
-                </q-popup-proxy>
-              </q-btn>
+              <q-btn label="设置" flat @click="settingDialog = true"> </q-btn>
             </div>
           </q-date>
         </div>
@@ -242,6 +177,99 @@
         </q-tab-panels>
       </div>
     </div>
+    <q-dialog v-model="settingDialog" persistent>
+      <q-card style="min-width: 400px; min-height: 350px">
+        <q-card-section>
+          <div class="text-h6 text-center">设 置</div>
+        </q-card-section>
+        <q-card-section>
+          <div class="q-gutter-sm q-pa-sm">
+            <q-select
+              v-model="monthRange"
+              outlined
+              dense
+              :options="monthOption"
+              transition-show="jump-up"
+              transition-hide="jump-up"
+              hint="0代表全部"
+              hide-hint
+              hide-bottom-space
+            >
+              <template #before>
+                <div class="text-subtitle2">事件范围：</div>
+              </template>
+              <template #prepend>
+                <div class="text-subtitle2">最近：</div>
+              </template>
+              <template #append>
+                <div class="text-subtitle2">月</div>
+              </template>
+            </q-select>
+            <q-select
+              ref="themeColoRef"
+              v-model="themeColor"
+              outlined
+              dense
+              :options="colorOptions"
+              hide-bottom-space
+              emit-value
+              map-options
+              option-label="label"
+              option-value="value"
+              transition-show="jump-up"
+              transition-hide="jump-up"
+              :rules="[(val) => !!val || '请选择颜色']"
+            >
+              <template #before>
+                <div class="text-subtitle2">日历颜色：</div>
+              </template>
+              <template #prepend>
+                <div class="text-subtitle2"></div>
+              </template>
+              <template #append>
+                <div class="text-subtitle2"></div>
+              </template>
+            </q-select>
+            <q-select
+              ref="eventColoRef"
+              v-model="eventColor"
+              outlined
+              dense
+              hide-bottom-space
+              emit-value
+              map-options
+              :options="colorOptions"
+              option-label="label"
+              option-value="value"
+              transition-show="jump-up"
+              transition-hide="jump-up"
+              :rules="[(val) => !!val || '请选择颜色']"
+            >
+              <template #before>
+                <div class="text-subtitle2">事件颜色：</div>
+              </template>
+              <template #prepend>
+                <div class="text-subtitle2"></div>
+              </template>
+              <template #append>
+                <div class="text-subtitle2"></div>
+              </template>
+            </q-select>
+          </div>
+        </q-card-section>
+        <q-card-section>
+          <div class="row q-gutter-xs justify-end q-pa-sm">
+            <q-btn
+              outline
+              label="提 交"
+              color="primary"
+              @click="calenderSetting"
+            />
+            <q-btn v-close-popup outline label="取 消" color="grey" />
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -255,24 +283,26 @@ const inputLight = ref(false);
 const selectedDate = ref(store.todayDate);
 const loggerLists = ref([]);
 const events = ref([]);
-const eventColor = ref('orange');
-const themeColor = ref('primary');
-
-const monthRange = ref(1);
+const themeColor = ref("");
+const eventColor = ref("");
+const monthRange = ref();
 const visibleBtn = ref(false);
 const readonlyEditor = ref(true);
 const isLogged = ref(false);
 const initialLoggerContent = ref([]);
 const isDisable = ref(false);
-const monthOption = [1, 3, 6, "全部"];
+const monthOption = [1, 3, 6, 0];
+const themeColoRef = ref(null);
+const eventColoRef = ref(null);
+const settingDialog = ref(false);
 const colorOptions = [
-  'primary',
-  'orange',
-  'green',
-  'teal',
-  'brown',
-  'purple',
-]
+  { label: "蓝色", value: "primary" },
+  { label: "橙色", value: "orange" },
+  { label: "绿色", value: "green" },
+  { label: "青色", value: "teal" },
+  { label: "棕色", value: "brown" },
+  { label: "紫色", value: "purple" },
+];
 const loggerData = reactive({
   _id: "",
   date: "",
@@ -293,6 +323,30 @@ watch(
     }
   }
 );
+
+const calenderSetting = async () => {
+  if (
+    (await themeColoRef.value?.validate()) &&
+    (await eventColoRef.value?.validate())
+  ) {
+    const loggerSettings = {
+      user: store.user.email,
+      monthRange: monthRange.value,
+      themeColor: themeColor.value,
+      eventColor: eventColor.value,
+    };
+    await store.axios
+      .post("/user/loggersetting", loggerSettings)
+      .then((res) => {
+        getLoggerList();
+        store.successTip(res.data.msg);
+        settingDialog.value = false;
+      })
+      .catch((err) => {
+        store.failureTip(err.response.data.msg);
+      });
+  }
+};
 
 const getLoggerList = async () => {
   await store.axios
@@ -348,14 +402,12 @@ const addLogger = async () => {
         initialLoggerContent.value = loggerLists.value.map(
           (list) => list.logger
         );
-        // console.log(res.data);
         events.value = loggerLists.value.map((item) => item.date);
         store.successTip(res.data.msg);
-        console.log(loggerLists.value);
         isLogged.value = true;
       })
       .catch((err) => {
-        console.log(err.response.data);
+        store.failureTip(err.response.data);
       })
       .finally(() => {
         loggerData.logger = "";
@@ -367,29 +419,29 @@ const editLogger = async (id, log, date, index) => {
   if (log === "<br><ul><li>" || log === "<div><br></div>" || log.length === 0) {
     confirmDel(id, index);
   } else {
-    (loggerData._id = id),
-      (loggerData.date = date),
-      (loggerData.user = store.user.email),
-      (loggerData.logger = log),
-      await store.axios
-        .post("/query/editlogger", loggerData)
-        .then((res) => {
-          loggerLists.value[index].logger = log;
-          initialLoggerContent.value = loggerLists.value.map(
-            (list) => list.logger
-          );
-          store.successTip(res.data.msg);
-        })
-        .catch((err) => {
-          store.failureTip(err.response.data.msg);
-        })
-        .finally(() => {
-          loggerData.date = "";
-          loggerData.logger = "";
-          loggerData._id = "";
-          visibleBtn.value = false;
-          readonlyEditor.value = true;
-        });
+    loggerData._id = id;
+    loggerData.date = date;
+    loggerData.user = store.user.email;
+    loggerData.logger = log;
+    await store.axios
+      .post("/query/editlogger", loggerData)
+      .then((res) => {
+        loggerLists.value[index].logger = log;
+        initialLoggerContent.value = loggerLists.value.map(
+          (list) => list.logger
+        );
+        store.successTip(res.data.msg);
+      })
+      .catch((err) => {
+        store.failureTip(err.response.data.msg);
+      })
+      .finally(() => {
+        loggerData.date = "";
+        loggerData.logger = "";
+        loggerData._id = "";
+        visibleBtn.value = false;
+        readonlyEditor.value = true;
+      });
   }
 };
 
@@ -436,13 +488,6 @@ const confirmDel = (id, index) => {
     .onCancel(() => {});
 };
 
-const calenderSetting = () => {
-  console.log("changeEventColor");
-};
-const changeThemeColor = async () => {
-  console.log("changeEventColor");
-};
-
 onMounted(async () => {
   let token = localStorage.getItem("token");
 
@@ -451,6 +496,9 @@ onMounted(async () => {
       await store
         .verifyUser()
         .then(() => {
+          monthRange.value = store.user.loggerSetting.monthRange;
+          themeColor.value = store.user.loggerSetting.themeColor;
+          eventColor.value = store.user.loggerSetting.eventColor;
           getLoggerList();
         })
         .catch(() => {

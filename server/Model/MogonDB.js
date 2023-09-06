@@ -72,6 +72,20 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: String
+  },
+  loggerSetting: {
+    monthRange: {
+      type: Number,
+      default: 1
+    },
+    eventColor: {
+      type: String,
+      default: 'orange'
+    },
+    themeColor: {
+      type: String,
+      default: 'primary'
+    },
   }
 });
 

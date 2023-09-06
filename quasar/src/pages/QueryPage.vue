@@ -265,7 +265,6 @@
       </q-scroll-area>
     </div>
 
-    <!-- IP Dialog -->
     <IPDialog 
       v-model="openIPDialog"
       @edit="onEditIP(store.originalData._id)"
@@ -273,7 +272,6 @@
       @canceledit="onCancelEdit"
       @canceladd="onCancelAdd"
     />
-    <!-- Phone Dialog -->
     <PhoneDialog 
       v-model="openPhoneDialog"
       @edit="onEditPhone(store.originalData._id)"
@@ -281,7 +279,6 @@
       @canceledit="onCancelEdit"
       @canceladd="onCancelAdd"
     />
-    <!-- Printer Dialog -->
     <PrinterDialog 
       v-model="openPrinterDialog"
       @edit="onEditPrinter(store.originalData._id)"
@@ -289,7 +286,6 @@
       @canceledit="onCancelEdit"
       @canceladd="onCancelAdd"
     />
-    <!-- DataCenter Dialog -->
     <DataCenterDialog 
       v-model="openDataCenterDialog"
       @edit="onEditDataCenter(store.originalData._id)"
@@ -297,7 +293,6 @@
       @canceledit="onCancelEdit"
       @canceladd="onCancelAdd"
     />
-    <!-- Surveillance Dialog -->
     <SurveillanceDialog 
       v-model="openSurveillanceDialog"
       @edit="onEditSurveillance(store.originalData._id)"
@@ -305,8 +300,6 @@
       @canceledit="onCancelEdit"
       @canceladd="onCancelAdd"
     />
-
-    <!-- Delete Dialog -->
     <DeleteDialog 
       v-model="openDeleteDialog"
       @delete="onDelete(store.searchData.type, store.originalData._id)"
@@ -525,6 +518,26 @@ const handleSearch = async () => {
       return;
     }
     searchLoading.value = true;
+
+    if (store.searchData.type === "终端") {
+      columns.value = ipColumns;
+    } else if (store.searchData.type === "耗材") {
+      columns.value = printerColumns;
+    } else if (store.searchData.type === "电话") {
+      columns.value = phoneColumns;
+    } 
+    else if (store.searchData.type === "机房") {
+      columns.value = datacenterColumns;
+    } 
+    else if (store.searchData.type === "监控") {
+      columns.value = surveillanceColumns;
+    } 
+    else {
+      searchLoading.value = false;
+      store.failureTip('错误搜索类型');
+      return;
+    }
+
     const queryData = {
       type: store.searchData.type,
       place: store.searchData.place,
@@ -532,94 +545,25 @@ const handleSearch = async () => {
       keyword: keyword,
       user: store.user.email,
     };
-    if (store.searchData.type === "终端") {
-      columns.value = ipColumns;
-      await store.axios
-        .get("/query", {
-          params: { queryData },
-        })
-        .then((res) => {
-          showTable.value = true;
-          tableRows.value = res.data;
-        })
-        .catch((err) => {
-          if (err.response.data.status === "keywordError") {
-            keywordState.isEmpty = true;
-            keywordState.errorMsg = err.response.data.msg;
-          }
-          else {
-            store.failureTip(err.response.data.msg);
-          }
-        })
-        .finally(async () => {
-          scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
-          searchLoading.value = false;
-        });
-    } else if (store.searchData.type === "耗材") {
-      columns.value = printerColumns;
-      await store.axios
-        .get("/query", {
-          params: { queryData },
-        })
-        .then((res) => {
-          
-          showTable.value = true;
-          tableRows.value = res.data;
-        })
-        .catch((err) => console.log(err))
-        .finally(async () => {
-          scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
-          searchLoading.value = false;
-        });
-    } else if (store.searchData.type === "电话") {
-      columns.value = phoneColumns;
-      await store.axios
-        .get("/query", {
-          params: { queryData },
-        })
-        .then((res) => {
-          showTable.value = true;
-          tableRows.value = res.data;
-        })
-        .catch((err) => console.log(err))
-        .finally(async () => {
-          scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
-          searchLoading.value = false;
-        });
-    } 
-    else if (store.searchData.type === "机房") {
-      columns.value = datacenterColumns;
-      await store.axios
-        .get("/query", {
-          params: { queryData },
-        })
-        .then((res) => {
-          showTable.value = true;
-          tableRows.value = res.data;
-        })
-        .catch((err) => console.log(err))
-        .finally(async () => {
-          scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
-          searchLoading.value = false;
-        });
-    } 
-    else if (store.searchData.type === "监控") {
-      columns.value = surveillanceColumns;
-      await store.axios
-        .get("/query", { params: { queryData }})
-        .then((res) => {
-          showTable.value = true;
-          tableRows.value = res.data;
-        })
-        .catch((err) => console.log(err))
-        .finally(async () => {
-          scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
-          searchLoading.value = false;
-        });
-    } 
-    else {
-      searchLoading.value = false;
-    }
+    await store.axios
+      .get("/query", {params: { queryData }})
+      .then((res) => {
+        showTable.value = true;
+        tableRows.value = res.data;
+      })
+      .catch((err) => {
+        if (err.response.data.status === "keywordError") {
+          keywordState.isEmpty = true;
+          keywordState.errorMsg = err.response.data.msg;
+        }
+        else {
+          store.failureTip(err.response.data.msg);
+        }
+      })
+      .finally(async () => {
+        scrollAreaHeight.value = await tableRef.value?.$el.clientHeight + 10;
+        searchLoading.value = false;
+      });
   }
 };
 
@@ -642,6 +586,26 @@ const sortIPv4 = (a, b) => {
   const numericB = ipToNumber(b);
 
   return numericA - numericB;
+};
+
+const fetchLists = async () => {
+  const queryData = {
+    type: store.searchData.type,
+    place: store.searchData.place,
+    field: store.searchData.field,
+    keyword: "所有",
+    user: store.user.email,
+  };
+
+  await store.axios
+    .get("/query", { params: { queryData } })
+    .then((res) => {
+      store.checkLists = res.data;
+      console.log();
+    })
+    .catch((err) => {
+      store.failureTip(err.response.data.msg);
+    });
 };
 
 const openAddDialog = () => {

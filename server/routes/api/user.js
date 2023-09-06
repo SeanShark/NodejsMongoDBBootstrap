@@ -7,6 +7,7 @@ const key = process.env.jwtSecretKey;
 const router = express.Router();
 const transporter = require("../../Mail/email");
 const svgCaptcha = require('svg-captcha');
+const validateUser = require("../../components/ValidateEmail.js");
 
 
 router.get("/captcha", async ( req, res) => {
@@ -97,14 +98,14 @@ router.post("/signup", async (req, res, next) => {
     return;
   }
 
-  const userEmail = req.body.email;
+  const email = req.body.email;
   const activationCode = Math.floor(100000 + Math.random() * 900000);
 
-  await User.findOne({ email: userEmail })
+  await User.findOne({ email: email })
   .then(async (user) => {
     if(!user) {
       const newUser = new User({
-        email: userEmail,
+        email: email,
         activationCode: activationCode,
       });
       await newUser.save();
@@ -122,7 +123,7 @@ router.post("/signup", async (req, res, next) => {
     await transporter
     .sendMail({
       from: "replytech@qq.com",
-      to: userEmail,
+      to: email,
       subject: "注册验证码",
       //html: `<a href="http://10.168.3.3:5000/api/user/reset/${userEmail}/${VerificationCode}"><b>点击进入重置页面</b></a>`,
       html: `注册的验证码为：${activationCode}`,
@@ -150,11 +151,10 @@ router.post("/signup", async (req, res, next) => {
 
 //Step two: Check email and register code, if ture, send 200 to client; if false, send 401
 router.post("/verifysignup", async (req, res) => {
-  const email = req.body.email;
-  const activationCode = req.body.code;
+  const { email, code } = req.body;
   try {
     await User.findOne({
-      $and: [{ email: email }, { activationCode: activationCode }],
+      $and: [{ email: email }, { activationCode: code }],
     }).then((user) => {
       if (user) {
         res.status(200).json({
@@ -181,12 +181,10 @@ router.post("/verifysignup", async (req, res) => {
 
 //Step three: Check email and register code, if ture ,save bcrypt password, set registerCode to null and send status 200
 router.post("/setpassword", async (req, res) => {
-  let email = req.body.email;
-  let activationCode = req.body.code;
-  let password = req.body.password;
+  const { email, code, password } = req.body;
 
   await User.findOne({
-    $and: [{ email: email }, { activationCode: activationCode }],
+    $and: [{ email: email }, { activationCode: code }],
   })
     .then((user) => {
       if (user) {
@@ -265,6 +263,7 @@ router.get("/verifyuser", async (req, res, next) => {
             name: user.name,
             createdAt: user.createdAt,
             lastLogin: user.lastLogin,
+            loggerSetting: user.loggerSetting,
           },
         });
       })
@@ -321,11 +320,10 @@ router.post("/forgot", async (req, res, next) => {
 
 //Step two: Verfify email and forgotCode code, if ture, send 200 to client; if false, send 401
 router.post("/verifyforgotcode", async (req, res) => {
-  let forgotCode = req.body.code;
-  let email = req.body.email;
+  const { code, email } = req.body;
   try {
     await User.findOne({
-      $and: [{ email: email }, { forgotCode: forgotCode }],
+      $and: [{ email: email }, { forgotCode: code }],
     }).then((user) => {
       if (user) {
         res.status(200).json({
@@ -350,12 +348,11 @@ router.post("/verifyforgotcode", async (req, res) => {
 
 //Step three: Verify email and forgot code, if ture ,save bcrypt new password, delete forgot code and send status 200
 router.post("/resetpassword", async (req, res) => {
-  let email = req.body.email;
-  let forgotCode = req.body.code;
-  let password = req.body.password;
+
+  const { email, code, password } = req.body;
 
   await User.findOne({
-    $and: [{ email: email }, { forgotCode: forgotCode }],
+    $and: [{ email: email }, { forgotCode: code }],
   })
     .then((user) => {
       if (user) {
@@ -385,7 +382,6 @@ router.post("/resetpassword", async (req, res) => {
       }
     })
     .catch((err) => {
-      console.log(err);
       res.status(401).json({
         status: "error",
         msg: "有错误发生，请重试.",
@@ -393,4 +389,41 @@ router.post("/resetpassword", async (req, res) => {
     });
 });
 
+
+router.post("/loggersetting", async (req, res) => {
+  const { user, monthRange, themeColor, eventColor} = req.body;
+  if (!validateUser(user)) {
+    return res.status(401).json({
+      status: "Error",
+      msg: "未授权用户",
+    });
+  }
+
+  await User.findOne({ email: user })
+  .then((user) => {
+    user.loggerSetting.monthRange = monthRange;
+    user.loggerSetting.themeColor = themeColor;
+    user.loggerSetting.eventColor = eventColor;
+
+    user.save()
+    .then(() => {
+      res.status(201).json({
+        status: "success",
+        msg: "设置完毕.",
+      });
+    })
+    .catch((err) => {
+      res.status(401).json({
+        status: "error",
+        msg: err.message,
+      });
+    })
+  })
+  .catch((err) => {
+    res.status(401).json({
+      status: "error",
+      msg: err.message,
+    });
+  });
+});
 module.exports = router;

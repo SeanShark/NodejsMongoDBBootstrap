@@ -60,6 +60,7 @@
             filled
             label="号码"
             hint="号码为8位数"
+            lazy-rules="ondemand"
             hide-hint
             hide-bottom-space
             :error="store.phoneFormState.numberError"

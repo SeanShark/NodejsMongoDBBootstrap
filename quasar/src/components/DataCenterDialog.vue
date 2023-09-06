@@ -75,6 +75,7 @@
             v-model="store.datacenterData.IP"
             filled
             label="IP"
+            use-input
             hide-bottom-space
             :error="store.datacenterFormState.IPError"
           >
@@ -162,4 +163,5 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["canceladd", "canceledit", "add", "edit"]);
+
 </script>

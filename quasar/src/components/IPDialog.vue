@@ -74,9 +74,9 @@
           <q-input
             v-model="store.IPData.IP"
             filled
-            label="IP"
             hide-bottom-space
             lazy-rules="ondemand"
+            label="IP"
             :error="store.ipFormState.IPError"
           >
             <template #prepend>
@@ -160,6 +160,6 @@ const props = defineProps({
     required: true,
   },
 });
-
 const emit = defineEmits(["canceladd", "canceledit", "add", "edit"]);
+
 </script>

@@ -39,6 +39,7 @@
       </div>
     </div>
     <div class="q-gutter-y-md q-pa-sm">
+      
       <q-card>
         <q-tabs
           v-model="tab"

@@ -8,23 +8,15 @@ const {
 } = require("../../Model/MogonDB");
 const DataBase = require("../../Model/MogonDB");
 const router = express.Router();
+const validateUser = require("../../components/ValidateEmail.js");
 
 router.get("/", async (req, res) => {
-  if (!req.query.queryData.user) {
+  const user = req.query.queryData.user;
+  if (!validateUser(user)) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "未授权用户",
     });
-  } else {
-    const isAuthUser = DataBase.User.exists({
-      email: req.query.queryData.user,
-    });
-    if (!isAuthUser) {
-      return res.status(401).json({
-        status: "Error",
-        msg: "未授权用户",
-      });
-    }
   }
 
   if (
@@ -104,106 +96,69 @@ router.get("/", async (req, res) => {
 
 router.get("/logger", async (req, res) => {
   const user = req.query.user;
-  if(!user) {
+  if (!validateUser(user)) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "未授权用户",
     });
-  } else {
-    const isAuthUser = DataBase.User.exists({
-      email: user,
-    });
-    if (!isAuthUser) {
+  }
+
+  try {
+    let result = [];
+    const monthOption = parseInt(req.query.month);
+    if (req.query.month === 0) {
+      result = await DataBase.Logger.find({ user: user });
+    } else if (monthOption === 1 || monthOption === 3 || monthOption === 6) {
+      const MonthAgo = new Date();
+      MonthAgo.setMonth(MonthAgo.getMonth() - monthOption);
+
+      result = await DataBase.Logger.find({
+        $and: [{ user: user }, { createdAt: { $gte: MonthAgo } }],
+      });
+    } else {
       return res.status(401).json({
-        status: "Error",
-        msg: "未授权用户",
+        status: "error",
+        msg: "错误搜索类型",
       });
     }
-  }
-  try {
-    
-    
-    let result = [];
-    if (req.query.month === '全部') {
-      result = await DataBase.Logger.find({ user: user });
-    } else {
-      const monthOption = parseInt(req.query.month)
-      if (monthOption === 1 || monthOption === 3 || monthOption === 6) {
-        const MonthAgo = new Date();
-        MonthAgo.setMonth(MonthAgo.getMonth() - monthOption);
-      
-        result = await DataBase.Logger.find({
-          $and: [
-            { user: user },
-            { createdAt: { $gte: MonthAgo }}
-          ]
-        });
-      } else {
-        return res.status(401).json({
-          status: "Error",
-          msg: "错误搜索类型",
-        });
-      }
-    }
-    
-    
+
     res.status(201).json(result);
-  }
-  catch (error) {
-    console.error(error);
+  } catch (error) {
     res.status(500).json({ message: error.msg });
   }
 });
 
 router.post("/addlogger", async (req, res) => {
-  if (!req.body.user) {
+  const { user, logger, date } = req.body
+  if (!validateUser(user)) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "未授权用户",
     });
-  } else {
-    const isAuthUser = DataBase.User.exists({
-      email: req.body.user,
-    });
-    if (!isAuthUser) {
-      return res.status(401).json({
-        status: "Error",
-        msg: "未授权用户",
-      });
-    }
   }
-
-  const logger = req.body.logger;
-  const user = req.body.user;
-  const date = req.body.date;
   const createdAt = new Date().toLocaleString("zh-cn");
 
   const loggerExist = await DataBase.Logger.exists({
-    $and: [
-      { user: user },
-      { date: date }
-    ],
+    $and: [{ user: user }, { date: date }],
   });
 
-
-  if ( loggerExist ) {
-    const existingLogger = await DataBase.Logger.findOne({ "_id": loggerExist });
-    const updatedLogger = existingLogger.logger + "<ul><li>" + logger + "</li></ul>";
+  if (loggerExist) {
+    const existingLogger = await DataBase.Logger.findOne({ _id: loggerExist });
+    const updatedLogger =
+      existingLogger.logger + "<ul><li>" + logger + "</li></ul>";
 
     await DataBase.Logger.updateOne(
-      { "_id": loggerExist },
-      { $set: { "logger": updatedLogger } },
-    );
+      { _id: loggerExist },
+      { $set: { logger: updatedLogger } }
+    )
     res.status(201).json({
       status: "success",
       msg: "日志成功增加.",
       logger: existingLogger.logger,
       id: loggerExist,
     });
-
     // console.log(result.modifiedCount, "document(s) updated");
-  }
-  else {
+  } else {
     try {
       const newLogger = new DataBase.Logger({
         user: user,
@@ -213,72 +168,67 @@ router.post("/addlogger", async (req, res) => {
       });
 
       // Save new post to database
-      await newLogger.save()
-      .then((e) => {
-        res.status(201).json({
-          status: "success",
-          msg: "日志成功增加.",
-          id: e._id.toString(),
+      await newLogger
+        .save()
+        .then((e) => {
+          res.status(201).json({
+            status: "success",
+            msg: "日志成功增加.",
+            id: e._id.toString(),
+          });
+        })
+        .catch((err) => {
+          return res.status(401).json({
+            status: "error",
+            msg: err.message,
+          });
         });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: "error",
+        msg: "Internal server error.",
+      });
+    }
+  }
+});
+
+router.post("/editlogger", async (req, res) => {
+  const { user, _id, logger } = req.body;
+  if (!validateUser(user)) {
+    return res.status(401).json({
+      status: "error",
+      msg: "未授权用户",
+    });
+  }
+
+  try {
+    await DataBase.Logger.findOneAndUpdate({ _id: _id }, { logger: logger })
+      .then((e) => {
+        if (e) {
+          res.status(201).json({
+            status: "success",
+            msg: "日志成功修改.",
+          });
+        } else {
+          res.status(404).json({
+            status: "error",
+            msg: "没有改日志记录.",
+          });
+        }
       })
       .catch((err) => {
         return res.status(401).json({
           status: "error",
           msg: err.message,
         });
-      })
-    }
-    catch (error) {
-      console.error(error);
-      return res.status(500).json({
-        status: "error",
-        msg: "Internal server error."
       });
-    }
-  }
-})
-
-router.post("/editlogger", async (req, res) => {
-  if (!req.body.user) {
-    return res.status(401).json({
-      status: "Error",
-      msg: "未授权用户",
-    });
-  } else {
-    const isAuthUser = DataBase.User.exists({
-      email: req.body.user,
-    });
-    if (!isAuthUser) {
-      return res.status(401).json({
-        status: "Error",
-        msg: "未授权用户",
-      });
-    }
-  }
-  try {
-    const id = req.body._id;
-    const logger = req.body.logger;
-    
-    await DataBase.Logger.findOneAndUpdate({ _id: id }, { "logger": logger})
-    .then(() => {
-      res.status(201).json({
-        status: "success",
-        msg: "日志成功修改.",
-      });
-    })
-    .catch((err) => {
-      return res.status(401).json({
-        status: "Error",
-        msg: err.message,
-      });
-    })
-  }
-  catch (error) {
+  } catch (error) {
     // Handle errors
     console.error(error);
     return res.status(500).json({
       status: "error",
-      msg: "Internal server error."
+      msg: "Internal server error.",
     });
   }
 });
@@ -430,7 +380,7 @@ router.post("/addphone", async (req, res) => {
     !req.body.办公室
   ) {
     res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "缺乏关键信息.",
     });
     return;
@@ -516,7 +466,7 @@ router.post("/addprinter", async (req, res) => {
     !req.body.办公室
   ) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "缺乏关键信息",
     });
   }
@@ -616,21 +566,11 @@ router.delete("/delete", async (req, res) => {
 
 router.delete("/deletelogger", async (req, res) => {
   const user = req.query.user;
-  if (!user) {
+  if (!validateUser(user)) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "未授权用户",
     });
-  } else {
-    const isAuthUser = DataBase.User.exists({
-      email: user,
-    });
-    if (!isAuthUser) {
-      return res.status(401).json({
-        status: "Error",
-        msg: "未授权用户",
-      });
-    }
   }
 
   const id = req.query.id;
@@ -651,8 +591,6 @@ router.delete("/deletelogger", async (req, res) => {
     });
   }
 });
-
-
 
 router.put("/editip", async (req, res) => {
   const ip = req.body.IP;
@@ -690,11 +628,18 @@ router.put("/editip", async (req, res) => {
     };
     IP.findOneAndUpdate({ _id: id }, updateUser)
       .then((e) => {
-        res.status(201).json({
-          status: "success",
-          msg: "记录已更新",
-          updatedAt: date,
-        });
+        if (e) {
+          res.status(201).json({
+            status: "success",
+            msg: "记录已更新",
+            updatedAt: date,
+          });
+        } else {
+          return res.status(401).json({
+            status: "error",
+            msg: "没有该记录",
+          });
+        }
       })
       .catch((err) => {
         return res.status(401).json({
@@ -713,7 +658,7 @@ router.put("/editphone", async (req, res) => {
     !req.body.办公室
   ) {
     res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "缺乏关键信息.",
     });
     return;
@@ -779,12 +724,19 @@ router.put("/editphone", async (req, res) => {
       updatedAt: date,
     };
     Phone.findOneAndUpdate({ _id: req.body._id }, updatePhone)
-      .then(() => {
-        res.status(201).json({
-          status: "success",
-          msg: "记录已更新",
-          updatedAt: date,
-        });
+      .then((e) => {
+        if (e) {
+          res.status(201).json({
+            status: "success",
+            msg: "记录已更新",
+            updatedAt: date,
+          });
+        } else {
+          return res.status(401).json({
+            status: "error",
+            msg: "没有该记录",
+          });
+        }
       })
       .catch((err) => {
         return res.status(401).json({
@@ -804,7 +756,7 @@ router.put("/editprinter", async (req, res) => {
     !req.body.办公室
   ) {
     return res.status(401).json({
-      status: "Error",
+      status: "error",
       msg: "缺乏关键信息",
     });
   }
@@ -844,12 +796,19 @@ router.put("/editprinter", async (req, res) => {
     updatedAt: date,
   };
   Printer.findOneAndUpdate({ _id: req.body._id }, updatePrinter)
-    .then(() => {
-      res.status(201).json({
-        status: "success",
-        msg: "记录已更新",
-        updatedAt: date,
-      });
+    .then((e) => {
+      if (e) {
+        res.status(201).json({
+          status: "success",
+          msg: "记录已更新",
+          updatedAt: date,
+        });
+      } else {
+        return res.status(401).json({
+          status: "error",
+          msg: "没有该记录",
+        });
+      }
     })
     .catch((err) => {
       return res.status(401).json({
@@ -884,12 +843,19 @@ router.put("/editdatacenter", async (req, res) => {
       updatedAt: date,
     };
     DataCenter.findOneAndUpdate({ _id: req.body._id }, updateDataCenter)
-      .then(() => {
-        res.status(201).json({
-          status: "success",
-          msg: "记录已更新",
-          updatedAt: date,
-        });
+      .then((e) => {
+        if (e) {
+          res.status(201).json({
+            status: "success",
+            msg: "记录已更新",
+            updatedAt: date,
+          });
+        } else {
+          return res.status(401).json({
+            status: "error",
+            msg: "没有该记录",
+          });
+        }
       })
       .catch((err) => {
         return res.status(401).json({
@@ -925,12 +891,19 @@ router.put("/editsurveillance", async (req, res) => {
       updatedAt: date,
     };
     Surveillance.findOneAndUpdate({ _id: req.body._id }, updateDataCenter)
-      .then(() => {
-        res.status(201).json({
-          status: "success",
-          msg: "记录已更新",
-          updatedAt: date,
-        });
+      .then((e) => {
+        if (e) {
+          res.status(201).json({
+            status: "success",
+            msg: "记录已更新",
+            updatedAt: date,
+          });
+        } else {
+          return res.status(401).json({
+            status: "error",
+            msg: "没有该记录",
+          });
+        }
       })
       .catch((err) => {
         return res.status(401).json({

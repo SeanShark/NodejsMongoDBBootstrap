@@ -167,4 +167,18 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["canceladd", "canceledit", "add", "edit"]);
+
+// const filteredFunction = (val, update) => {
+//   if (val === '') {
+//     update(() => {
+//       store.filteredLists = store.checkLists
+//     })
+//   }
+
+//   update(() => {
+//     store.filteredLists = store.checkLists.filter(list => {
+//       return list.IP.includes(val);
+//     })
+//   })
+// }
 </script>
