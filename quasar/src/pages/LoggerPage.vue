@@ -495,13 +495,18 @@ onMounted(async () => {
     try {
       await store
         .verifyUser()
-        .then(() => {
-          monthRange.value = store.user.loggerSetting.monthRange;
-          themeColor.value = store.user.loggerSetting.themeColor;
-          eventColor.value = store.user.loggerSetting.eventColor;
-          getLoggerList();
+        .then((res) => {
+          if(res.status === 200) {
+            monthRange.value = store.user.loggerSetting.monthRange;
+            themeColor.value = store.user.loggerSetting.themeColor;
+            eventColor.value = store.user.loggerSetting.eventColor;
+            getLoggerList();
+          }
+          else {
+            router.push("/index");
+          }
         })
-        .catch(() => {
+        .catch((err) => {
           router.push("/index");
         });
     } catch (err) {

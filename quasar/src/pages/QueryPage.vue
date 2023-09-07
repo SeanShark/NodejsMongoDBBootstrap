@@ -330,8 +330,10 @@ onMounted(async () => {
     try {
       await store
         .verifyUser()
-        .then(() => {
-          store.getTodolists();
+        .then((res) => {
+          if(res.status !== 200) {
+            router.push("/index");
+          }
         })
         .catch(() => {
           router.push("/index");

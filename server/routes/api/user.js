@@ -254,18 +254,26 @@ router.get("/verifyuser", async (req, res, next) => {
       });
     await User.findOne({ _id: decoded.userID })
       .then((user) => {
-        user.lastLogin = new Date();
-        user.save();
-
-        return res.status(200).json({
-          user: {
-            email: user.email,
-            name: user.name,
-            createdAt: user.createdAt,
-            lastLogin: user.lastLogin,
-            loggerSetting: user.loggerSetting,
-          },
-        });
+        if(user) {
+          user.lastLogin = new Date();
+          user.save();
+  
+          return res.status(200).json({
+            user: {
+              email: user.email,
+              name: user.name,
+              createdAt: user.createdAt,
+              lastLogin: user.lastLogin,
+              loggerSetting: user.loggerSetting,
+            },
+          });
+        }
+        else {
+          return res.status(401).json({
+            title: "error",
+            msg: "未授权用户",
+          });
+        }
       })
       .catch((err) => console.log('verifyuser', err));
   });
